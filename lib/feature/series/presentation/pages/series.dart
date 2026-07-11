@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playon/core/models/response/series_model.dart';
+import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
+import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/static/app_color.dart';
-import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
 
 class Series extends StatefulWidget {
@@ -15,6 +18,7 @@ class Series extends StatefulWidget {
 class _SeriesState extends State<Series> {
   int selectedIndex = 0;
   String selectedFilter = 'HOME';
+  final ScrollController _scrollController = ScrollController();
 
   final List<String> tabs = const [
     "HOME",
@@ -25,70 +29,40 @@ class _SeriesState extends State<Series> {
     "KABADDI",
   ];
 
-  final List<Map<String, String>> series = [
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "CRICKET",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "CRICKET",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "CRICKET",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "FOOTBALL",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "HOCKEY",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "CRICKET",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "FOOTBALL",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-    {
-      "image": AppImage.background,
-      "title": "Ghaziabad Premier League 2026",
-      "sport": "HOCKEY",
-      "state": "UP",
-      "description": "Ghaziabad Premier League",
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Kick off the initial fetch.
+    context.read<SeriesBloc>().add(const SeriesEvent.getSeriesList());
+    _scrollController.addListener(_onScroll);
+  }
 
-  List<Map<String, String>> get filteredSeries {
-    if (selectedFilter == 'HOME') {
-      return series;
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final nearBottom = _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200;
+    if (nearBottom) {
+      context.read<SeriesBloc>().add(const SeriesEvent.getMoreSeriesList());
     }
-    return series.where((item) => item['sport'] == selectedFilter).toList();
+  }
+
+  // Client-side filter by sport tab, same behaviour as before —
+  // the API list endpoint doesn't take a sport filter param here,
+  // so we filter over whatever page(s) have been loaded so far.
+  List<SeriesModel> _filter(List<SeriesModel> series) {
+    if (selectedFilter == 'HOME') return series;
+    return series
+        .where(
+          (item) => (item.sport ).toUpperCase() == selectedFilter,
+        )
+        .toList();
   }
 
   @override
@@ -100,7 +74,7 @@ class _SeriesState extends State<Series> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text("All Series", style: text24()),
@@ -118,22 +92,92 @@ class _SeriesState extends State<Series> {
               ),
             ),
             Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(4),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4, // Number of cards per row
-                  crossAxisSpacing: 12, // Horizontal spacing between cards
-                  mainAxisSpacing: 12, // Vertical spacing between cards
-                  childAspectRatio:
-                      1, // Width to height ratio (adjust as needed)
-                ),
-                itemCount: filteredSeries.length,
-                itemBuilder: (context, index) {
-                  return SeriesCard(
-                    series: filteredSeries[index],
-                    onTap: () {
-                      AppNavigation.push(context, "/seriesDetail/12");
+              child: BlocBuilder<SeriesBloc, SeriesState>(
+                builder: (context, state) {
+                  // Initial load.
+                  if (state.allSeriesStatus == Status.loading &&
+                      state.series.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  // Initial load failed.
+                  if (state.allSeriesStatus == Status.error &&
+                      state.series.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("Something went wrong", style: text16()),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              context
+                                  .read<SeriesBloc>()
+                                  .add(const SeriesEvent.getSeriesList());
+                            },
+                            child: const Text("Retry"),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final filteredSeries = _filter(state.series);
+
+                  if (filteredSeries.isEmpty) {
+                    return Center(
+                      child: Text("No series found", style: text16()),
+                    );
+                  }
+
+                  final isLoadingMore =
+                      state.moreSeriesStatus == Status.loading;
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context
+                          .read<SeriesBloc>()
+                          .add(const SeriesEvent.getSeriesList());
                     },
+                    child: GridView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(4),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4, // Number of cards per row
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: filteredSeries.length + (isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= filteredSeries.length) {
+                          // Trailing pagination spinner.
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final item = filteredSeries[index];
+                        return SeriesCard(
+                          series: item,
+                          onTap: () {
+                            AppNavigation.push(
+                              context,
+                              "/seriesDetail/${item.id }",
+                            );
+                          },
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -146,7 +190,7 @@ class _SeriesState extends State<Series> {
 }
 
 class SeriesCard extends StatefulWidget {
-  final Map<String, String> series;
+  final SeriesModel series;
   final VoidCallback? onTap;
 
   const SeriesCard({super.key, required this.series, this.onTap});
@@ -216,18 +260,24 @@ class _SeriesCardState extends State<SeriesCard> {
                 children: [
                   // Image - flexes to fill whatever space is left over
                   // after the content section below takes what it needs.
-                  // (Previously this was Expanded(flex: 6) alongside a
-                  // flex: 4 content section, which forced the text into
-                  // a fixed share of the height and overflowed on
-                  // smaller cards.)
                   Expanded(
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.asset(
-                          series['image'] ?? '',
+                        Image.network(
+                          series.banner ,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              color: Colors.grey[850],
+                              alignment: Alignment.center,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey[850],
@@ -264,9 +314,7 @@ class _SeriesCardState extends State<SeriesCard> {
                     ),
                   ),
                   // Content section — NOT wrapped in Expanded. It only
-                  // takes the height its text actually needs, so it can
-                  // never overflow; the image above absorbs any extra
-                  // or missing space instead.
+                  // takes the height its text actually needs.
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -278,27 +326,27 @@ class _SeriesCardState extends State<SeriesCard> {
                       children: [
                         // Title
                         Text(
-                          series['title'] ?? '',
+                          series.title ,
                           style: text16(fontWeight: FontWeight.w600),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        // Sport and State as pill chips
+                        // Sport and Country as pill chips
                         Row(
                           children: [
-                            if ((series['sport'] ?? '').isNotEmpty)
-                              _Chip(text: series['sport']!),
-                            if ((series['state'] ?? '').isNotEmpty) ...[
+                            if ((series.sport ).isNotEmpty)
+                              _Chip(text: series.sport.toUpperCase()),
+                            if ((series.tourCountry ?? '').isNotEmpty) ...[
                               const SizedBox(width: 8),
-                              _Chip(text: series['state']!),
+                              _Chip(text: series.tourCountry!),
                             ],
                           ],
                         ),
                         const SizedBox(height: 4),
                         // Description
                         Text(
-                          series['description'] ?? '',
+                          series.description ,
                           style: text12(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -316,7 +364,7 @@ class _SeriesCardState extends State<SeriesCard> {
   }
 }
 
-/// Small pill-shaped label used for sport/state tags.
+/// Small pill-shaped label used for sport/country tags.
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});

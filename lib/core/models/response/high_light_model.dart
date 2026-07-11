@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:playon/core/models/response/series_model.dart';
+import 'package:playon/core/models/response/series_highlight_model.dart';
 import 'package:playon/core/models/response/team_model.dart';
 
 class HighlightResponse extends Equatable {
@@ -80,7 +80,7 @@ class HighlightResponse extends Equatable {
 class HighlightModel extends Equatable {
   final String id;
   final String? matchId;
-  final SeriesModel series;
+  final SeriesHighlightModel series;
   final TeamModel teamA;
   final TeamModel teamB;
   final String title;
@@ -136,7 +136,7 @@ class HighlightModel extends Equatable {
     return HighlightModel(
       id: json['_id'] ?? '',
       matchId: json['matchId'],
-      series: SeriesModel.fromJson(json['seriesId'] ?? {}),
+      series: SeriesHighlightModel.fromJson(json['seriesId'] ?? {}),
       teamA: TeamModel.fromJson(json['teamA'] ?? {}),
       teamB: TeamModel.fromJson(json['teamB'] ?? {}),
       title: json['title'] ?? '',
@@ -171,7 +171,7 @@ class HighlightModel extends Equatable {
   HighlightModel copyWith({
     String? id,
     String? matchId,
-    SeriesModel? series,
+    SeriesHighlightModel? series,
     TeamModel? teamA,
     TeamModel? teamB,
     String? title,

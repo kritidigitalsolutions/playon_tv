@@ -34,6 +34,15 @@ class _LoginTvPageState extends State<LoginTvPage> {
   final _submitFocusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    // Fetch and dispatch the device name once the first frame is up.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDeviceName();
+    });
+  }
+
+  @override
   void dispose() {
     otpController.dispose();
     _pinKeyFocusNode.dispose();
@@ -55,13 +64,6 @@ class _LoginTvPageState extends State<LoginTvPage> {
     } else if (Platform.isWindows) {
       final info = await deviceInfo.windowsInfo;
       deviceName = info.computerName;
-    }
-    void initState() {
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadDeviceName();
-      });
-      super.initState();
     }
 
     if (mounted) {
@@ -129,6 +131,10 @@ class _LoginTvPageState extends State<LoginTvPage> {
 
   String? _digitFor(KeyboardKey key) => _digitKeyMap[key];
 
+  void _submit() {
+    context.read<AuthBloc>().add(AuthEvent.loginTv());
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -170,128 +176,128 @@ class _LoginTvPageState extends State<LoginTvPage> {
       ),
     );
 
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: BackgroundWithOneLight(
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 24,
-                ),
-
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: Center(
-                        child: AnimatedBox(
-                          height: size.height * 0.6,
-                          width: double.infinity,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.primary),
-                          child: Image.asset(AppImage.tv, fit: BoxFit.contain),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.loginStatus == Status.success) {
+          AppNavigation.pushReplacement(context, "/");
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: BackgroundWithOneLight(
+              child: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 24,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Center(
+                          child: AnimatedBox(
+                            height: size.height * 0.6,
+                            width: double.infinity,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.primary),
+                            child: Image.asset(AppImage.tv, fit: BoxFit.contain),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 48),
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Activate on TV", style: text24()),
-                          const SizedBox(height: 12),
-                          Text(
-                            "Stream on your Big Screen",
-                            style: text17(color: AppColors.grey500),
-                          ),
-                          const SizedBox(height: 28),
-                          Text(
-                            "Enjoy every match on your TV with a\nquick and easy setup",
-                            style: text17(color: AppColors.grey500),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            "Open the app on your TV and enter\nthe code shown to connect",
-                            style: text17(),
-                          ),
-                          const SizedBox(height: 24),
-
-                          Focus(
-                            focusNode: _pinKeyFocusNode,
-                            autofocus: true,
-                            onKeyEvent: _handlePinKey,
-                            child: Pinput(
-                              onChanged: (value) {
-                                context.read<AuthBloc>().add(
-                                  AuthEvent.otp(value),
-                                );
-                              },
-                              length: _pinLength,
-                              controller: otpController,
-                              defaultPinTheme: defaultPinTheme,
-                              focusedPinTheme: focusedPinTheme,
-                              submittedPinTheme: submittedPinTheme,
-                              showCursor: true,
-                              cursor: Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 3,
-                                    color: AppColors.primary,
-                                  ),
-                                ],
-                              ),
-
-                              readOnly: true,
-                              useNativeKeyboard: false,
-                              enableSuggestions: false,
-                              toolbarEnabled: false,
-                              keyboardType: TextInputType.none,
+                      const SizedBox(width: 48),
+                      Expanded(
+                        flex: 6,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Activate on TV", style: text24()),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Stream on your Big Screen",
+                              style: text17(color: AppColors.grey500),
                             ),
-                          ),
-                          const SizedBox(height: 32),
-                          SizedBox(
-                            height: 56,
-                            width: 220,
-                            child: TvFocusable(
-                              focusNode: _submitFocusNode,
-                              borderRadius: BorderRadius.circular(10),
-                              onSelect: () {},
-                              child: BlocListener<AuthBloc, AuthState>(
-                                listener: (context, state) {
-                                  if (state.loginStatus == Status.success) {
-                                    AppNavigation.pushReplacement(context, "/");
-                                  }
+                            const SizedBox(height: 28),
+                            Text(
+                              "Enjoy every match on your TV with a\nquick and easy setup",
+                              style: text17(color: AppColors.grey500),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              "Open the app on your TV and enter\nthe code shown to connect",
+                              style: text17(),
+                            ),
+                            const SizedBox(height: 24),
+
+                            Focus(
+                              focusNode: _pinKeyFocusNode,
+                              autofocus: true,
+                              onKeyEvent: _handlePinKey,
+                              child: Pinput(
+                                onChanged: (value) {
+                                  context.read<AuthBloc>().add(
+                                    AuthEvent.otp(value),
+                                  );
                                 },
+                                length: _pinLength,
+                                controller: otpController,
+                                defaultPinTheme: defaultPinTheme,
+                                focusedPinTheme: focusedPinTheme,
+                                submittedPinTheme: submittedPinTheme,
+                                showCursor: true,
+                                cursor: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 3,
+                                      color: AppColors.primary,
+                                    ),
+                                  ],
+                                ),
+                                readOnly: true,
+                                useNativeKeyboard: false,
+                                enableSuggestions: false,
+                                toolbarEnabled: false,
+                                keyboardType: TextInputType.none,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              height: 56,
+                              width: 220,
+                              // TvFocusable owns both remote "select" presses
+                              // AND taps (its internal GestureDetector is
+                              // opaque and sits above the child), so `onSelect`
+                              // is the single place the submit action must live.
+                              // AppButton's own onTap will never be reached.
+                              child: TvFocusable(
+                                focusNode: _submitFocusNode,
+                                borderRadius: BorderRadius.circular(10),
+                                onSelect: _submit,
                                 child: AppButton(
                                   radius: 10,
                                   title: "Submit your code",
-                                  onTap: () {
-                                    context.read<AuthBloc>().add(
-                                      AuthEvent.loginTv(),
-                                    );
-                                  },
+                                  onTap: _submit,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

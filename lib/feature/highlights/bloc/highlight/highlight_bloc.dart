@@ -1,8 +1,12 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:playon/core/models/response/high_light_detail_model.dart';
 import 'package:playon/core/models/response/high_light_model.dart';
 import 'package:playon/core/service/enum.dart';
 import 'package:playon/feature/highlights/usecase/all_highlight_usecase.dart';
+import 'package:playon/feature/highlights/usecase/high_light_deatil_usecase.dart';
 
 part 'highlight_event.dart';
 part 'highlight_state.dart';
@@ -10,12 +14,16 @@ part 'highlight_bloc.freezed.dart';
 
 class HighlightBloc extends Bloc<HighlightEvent, HighlightState> {
   final AllHighlightUsecase _allHighlightUsecase;
-
-  HighlightBloc({required AllHighlightUsecase highlightUsecase})
-    : _allHighlightUsecase = highlightUsecase,
-      super(const HighlightState()) {
+  final HighLightDeatilUsecase _highLightDeatilUsecase;
+  HighlightBloc({
+    required AllHighlightUsecase allHighlightUsecase,
+    required HighLightDeatilUsecase highlightDeatilUsecase, 
+  }) : _highLightDeatilUsecase = highlightDeatilUsecase,
+       _allHighlightUsecase = allHighlightUsecase,
+       super(const HighlightState()) {
     on<_FetchHighLight>(_onFetchHighLight);
     on<_FetchHighLightMore>(_onFetchHighLightMore);
+    on<_HightLightDetail>(_onHighlightDetail);
   }
 
   Future<void> _onFetchHighLight(
@@ -75,6 +83,26 @@ class HighlightBloc extends Bloc<HighlightEvent, HighlightState> {
       );
     } catch (_) {
       emit(state.copyWith(moreHighLightStatus: Status.error));
+    }
+  }
+
+  Future<void> _onHighlightDetail(
+    _HightLightDetail event,
+    Emitter<HighlightState> emit,
+  ) async {
+    emit(state.copyWith(highlightDetailStatus: Status.loading));
+
+    try {
+      final result = await _highLightDeatilUsecase(id:event.id);
+
+      emit(
+        state.copyWith(
+          highlightDetail: result,
+          highlightDetailStatus: Status.success,
+        ),
+      );
+    } catch (_) {
+      emit(state.copyWith(highlightDetailStatus: Status.error));
     }
   }
 }

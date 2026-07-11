@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playon/core/service/storage_service.dart';
 import 'package:playon/feature/auth/bloc/auth/auth_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
+import 'package:playon/static/app_navigation.dart';
 
 class CustomDrawer extends StatefulWidget {
   const CustomDrawer({
@@ -176,14 +178,30 @@ class _CustomDrawerState extends State<CustomDrawer> {
                         if (expanded) ...[
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              user?.fullName??"Your account",
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.white.withOpacity(0.7),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  user?.fullName??"Your account",
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.white.withOpacity(0.7),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Spacer(),
+                                IconButton(
+                                  onPressed: (){
+                                    StorageService.logout();
+                                    AppNavigation.pushReplacement(context, "/loginTv");
+                                  },
+                                  icon: Icon(
+                                    Icons.logout,
+                                    color: AppColors.white.withOpacity(0.7),
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

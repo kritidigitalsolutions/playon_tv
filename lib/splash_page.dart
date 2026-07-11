@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:playon/core/service/storage_service.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
@@ -23,16 +24,32 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    debugPrint("🌊 [UI] SplashScreen mounted — will redirect to LoginTv in 5s");
-    _redirectTimer = Timer(const Duration(seconds: 5), _goToLogin);
+    debugPrint("🌊 [UI] SplashScreen mounted — will check token and redirect");
+    _redirectTimer = Timer(const Duration(seconds: 5), _checkAndNavigate);
   }
 
-  void _goToLogin() {
+  Future<void> _checkAndNavigate() async {
     if (!mounted) return;
-    // pushReplacement (not push) so the splash screen is removed from the
-    // stack — otherwise pressing Back on the TV remote from the login
-    // page would return to the splash screen, which is never what you want.
-    AppNavigation.pushReplacement(context, "/loginTv");
+    
+    try {
+      // Get token from storage service
+      final token =await StorageService.getToken();
+      debugPrint(token);
+      debugPrint("🌊 [UI] Token present: ${token != null  }");
+      
+      // Navigate based on token presence
+      if (token!=null  ) {
+        // User is logged in, go to home
+        AppNavigation.pushReplacement(context, "/");
+      } else {
+        // No token, go to login
+        AppNavigation.pushReplacement(context, "/loginTv");
+      }
+    } catch (e) {
+      // If any error occurs (storage not initialized, etc.), go to login
+      debugPrint("🌊 [UI] Error checking token: $e");
+      AppNavigation.pushReplacement(context, "/loginTv");
+    }
   }
 
   @override

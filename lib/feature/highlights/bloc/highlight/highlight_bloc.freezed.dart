@@ -55,12 +55,13 @@ extension HighlightEventPatterns on HighlightEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _FetchHighLight value)?  fetchHighLight,TResult Function( _FetchHighLightMore value)?  fetchHighLightMore,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( _FetchHighLight value)?  fetchHighLight,TResult Function( _FetchHighLightMore value)?  fetchHighLightMore,TResult Function( _HightLightDetail value)?  highlightDetail,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case _FetchHighLight() when fetchHighLight != null:
 return fetchHighLight(_that);case _FetchHighLightMore() when fetchHighLightMore != null:
-return fetchHighLightMore(_that);case _:
+return fetchHighLightMore(_that);case _HightLightDetail() when highlightDetail != null:
+return highlightDetail(_that);case _:
   return orElse();
 
 }
@@ -78,12 +79,13 @@ return fetchHighLightMore(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _FetchHighLight value)  fetchHighLight,required TResult Function( _FetchHighLightMore value)  fetchHighLightMore,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( _FetchHighLight value)  fetchHighLight,required TResult Function( _FetchHighLightMore value)  fetchHighLightMore,required TResult Function( _HightLightDetail value)  highlightDetail,}){
 final _that = this;
 switch (_that) {
 case _FetchHighLight():
 return fetchHighLight(_that);case _FetchHighLightMore():
-return fetchHighLightMore(_that);case _:
+return fetchHighLightMore(_that);case _HightLightDetail():
+return highlightDetail(_that);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -100,12 +102,13 @@ return fetchHighLightMore(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _FetchHighLight value)?  fetchHighLight,TResult? Function( _FetchHighLightMore value)?  fetchHighLightMore,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( _FetchHighLight value)?  fetchHighLight,TResult? Function( _FetchHighLightMore value)?  fetchHighLightMore,TResult? Function( _HightLightDetail value)?  highlightDetail,}){
 final _that = this;
 switch (_that) {
 case _FetchHighLight() when fetchHighLight != null:
 return fetchHighLight(_that);case _FetchHighLightMore() when fetchHighLightMore != null:
-return fetchHighLightMore(_that);case _:
+return fetchHighLightMore(_that);case _HightLightDetail() when highlightDetail != null:
+return highlightDetail(_that);case _:
   return null;
 
 }
@@ -122,11 +125,12 @@ return fetchHighLightMore(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  fetchHighLight,TResult Function()?  fetchHighLightMore,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  fetchHighLight,TResult Function()?  fetchHighLightMore,TResult Function( String id)?  highlightDetail,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FetchHighLight() when fetchHighLight != null:
 return fetchHighLight();case _FetchHighLightMore() when fetchHighLightMore != null:
-return fetchHighLightMore();case _:
+return fetchHighLightMore();case _HightLightDetail() when highlightDetail != null:
+return highlightDetail(_that.id);case _:
   return orElse();
 
 }
@@ -144,11 +148,12 @@ return fetchHighLightMore();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  fetchHighLight,required TResult Function()  fetchHighLightMore,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  fetchHighLight,required TResult Function()  fetchHighLightMore,required TResult Function( String id)  highlightDetail,}) {final _that = this;
 switch (_that) {
 case _FetchHighLight():
 return fetchHighLight();case _FetchHighLightMore():
-return fetchHighLightMore();case _:
+return fetchHighLightMore();case _HightLightDetail():
+return highlightDetail(_that.id);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -165,11 +170,12 @@ return fetchHighLightMore();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  fetchHighLight,TResult? Function()?  fetchHighLightMore,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  fetchHighLight,TResult? Function()?  fetchHighLightMore,TResult? Function( String id)?  highlightDetail,}) {final _that = this;
 switch (_that) {
 case _FetchHighLight() when fetchHighLight != null:
 return fetchHighLight();case _FetchHighLightMore() when fetchHighLightMore != null:
-return fetchHighLightMore();case _:
+return fetchHighLightMore();case _HightLightDetail() when highlightDetail != null:
+return highlightDetail(_that.id);case _:
   return null;
 
 }
@@ -242,9 +248,75 @@ String toString() {
 
 
 /// @nodoc
+
+
+class _HightLightDetail implements HighlightEvent {
+  const _HightLightDetail({required this.id});
+  
+
+ final  String id;
+
+/// Create a copy of HighlightEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$HightLightDetailCopyWith<_HightLightDetail> get copyWith => __$HightLightDetailCopyWithImpl<_HightLightDetail>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HightLightDetail&&(identical(other.id, id) || other.id == id));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id);
+
+@override
+String toString() {
+  return 'HighlightEvent.highlightDetail(id: $id)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$HightLightDetailCopyWith<$Res> implements $HighlightEventCopyWith<$Res> {
+  factory _$HightLightDetailCopyWith(_HightLightDetail value, $Res Function(_HightLightDetail) _then) = __$HightLightDetailCopyWithImpl;
+@useResult
+$Res call({
+ String id
+});
+
+
+
+
+}
+/// @nodoc
+class __$HightLightDetailCopyWithImpl<$Res>
+    implements _$HightLightDetailCopyWith<$Res> {
+  __$HightLightDetailCopyWithImpl(this._self, this._then);
+
+  final _HightLightDetail _self;
+  final $Res Function(_HightLightDetail) _then;
+
+/// Create a copy of HighlightEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? id = null,}) {
+  return _then(_HightLightDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
 mixin _$HighlightState {
 
- List<HighlightModel> get highlights; int get page; int get pageSize; int get total; int get totalPages; Status get allHighLightStatus; Status get moreHighLightStatus;
+ List<HighlightModel> get highlights; int get page; int get pageSize; int get total; int get totalPages; Status get allHighLightStatus; Status get moreHighLightStatus; HighlightDetailResponse? get highlightDetail; Status get highlightDetailStatus;
 /// Create a copy of HighlightState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -255,16 +327,16 @@ $HighlightStateCopyWith<HighlightState> get copyWith => _$HighlightStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HighlightState&&const DeepCollectionEquality().equals(other.highlights, highlights)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize)&&(identical(other.total, total) || other.total == total)&&(identical(other.totalPages, totalPages) || other.totalPages == totalPages)&&(identical(other.allHighLightStatus, allHighLightStatus) || other.allHighLightStatus == allHighLightStatus)&&(identical(other.moreHighLightStatus, moreHighLightStatus) || other.moreHighLightStatus == moreHighLightStatus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HighlightState&&const DeepCollectionEquality().equals(other.highlights, highlights)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize)&&(identical(other.total, total) || other.total == total)&&(identical(other.totalPages, totalPages) || other.totalPages == totalPages)&&(identical(other.allHighLightStatus, allHighLightStatus) || other.allHighLightStatus == allHighLightStatus)&&(identical(other.moreHighLightStatus, moreHighLightStatus) || other.moreHighLightStatus == moreHighLightStatus)&&(identical(other.highlightDetail, highlightDetail) || other.highlightDetail == highlightDetail)&&(identical(other.highlightDetailStatus, highlightDetailStatus) || other.highlightDetailStatus == highlightDetailStatus));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(highlights),page,pageSize,total,totalPages,allHighLightStatus,moreHighLightStatus);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(highlights),page,pageSize,total,totalPages,allHighLightStatus,moreHighLightStatus,highlightDetail,highlightDetailStatus);
 
 @override
 String toString() {
-  return 'HighlightState(highlights: $highlights, page: $page, pageSize: $pageSize, total: $total, totalPages: $totalPages, allHighLightStatus: $allHighLightStatus, moreHighLightStatus: $moreHighLightStatus)';
+  return 'HighlightState(highlights: $highlights, page: $page, pageSize: $pageSize, total: $total, totalPages: $totalPages, allHighLightStatus: $allHighLightStatus, moreHighLightStatus: $moreHighLightStatus, highlightDetail: $highlightDetail, highlightDetailStatus: $highlightDetailStatus)';
 }
 
 
@@ -275,7 +347,7 @@ abstract mixin class $HighlightStateCopyWith<$Res>  {
   factory $HighlightStateCopyWith(HighlightState value, $Res Function(HighlightState) _then) = _$HighlightStateCopyWithImpl;
 @useResult
 $Res call({
- List<HighlightModel> highlights, int page, int pageSize, int total, int totalPages, Status allHighLightStatus, Status moreHighLightStatus
+ List<HighlightModel> highlights, int page, int pageSize, int total, int totalPages, Status allHighLightStatus, Status moreHighLightStatus, HighlightDetailResponse? highlightDetail, Status highlightDetailStatus
 });
 
 
@@ -292,7 +364,7 @@ class _$HighlightStateCopyWithImpl<$Res>
 
 /// Create a copy of HighlightState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? highlights = null,Object? page = null,Object? pageSize = null,Object? total = null,Object? totalPages = null,Object? allHighLightStatus = null,Object? moreHighLightStatus = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? highlights = null,Object? page = null,Object? pageSize = null,Object? total = null,Object? totalPages = null,Object? allHighLightStatus = null,Object? moreHighLightStatus = null,Object? highlightDetail = freezed,Object? highlightDetailStatus = null,}) {
   return _then(_self.copyWith(
 highlights: null == highlights ? _self.highlights : highlights // ignore: cast_nullable_to_non_nullable
 as List<HighlightModel>,page: null == page ? _self.page : page // ignore: cast_nullable_to_non_nullable
@@ -301,6 +373,8 @@ as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_no
 as int,totalPages: null == totalPages ? _self.totalPages : totalPages // ignore: cast_nullable_to_non_nullable
 as int,allHighLightStatus: null == allHighLightStatus ? _self.allHighLightStatus : allHighLightStatus // ignore: cast_nullable_to_non_nullable
 as Status,moreHighLightStatus: null == moreHighLightStatus ? _self.moreHighLightStatus : moreHighLightStatus // ignore: cast_nullable_to_non_nullable
+as Status,highlightDetail: freezed == highlightDetail ? _self.highlightDetail : highlightDetail // ignore: cast_nullable_to_non_nullable
+as HighlightDetailResponse?,highlightDetailStatus: null == highlightDetailStatus ? _self.highlightDetailStatus : highlightDetailStatus // ignore: cast_nullable_to_non_nullable
 as Status,
   ));
 }
@@ -386,10 +460,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus,  HighlightDetailResponse? highlightDetail,  Status highlightDetailStatus)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HighlightState() when $default != null:
-return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus);case _:
+return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus,_that.highlightDetail,_that.highlightDetailStatus);case _:
   return orElse();
 
 }
@@ -407,10 +481,10 @@ return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.tot
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus,  HighlightDetailResponse? highlightDetail,  Status highlightDetailStatus)  $default,) {final _that = this;
 switch (_that) {
 case _HighlightState():
-return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus);case _:
+return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus,_that.highlightDetail,_that.highlightDetailStatus);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -427,10 +501,10 @@ return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.tot
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<HighlightModel> highlights,  int page,  int pageSize,  int total,  int totalPages,  Status allHighLightStatus,  Status moreHighLightStatus,  HighlightDetailResponse? highlightDetail,  Status highlightDetailStatus)?  $default,) {final _that = this;
 switch (_that) {
 case _HighlightState() when $default != null:
-return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus);case _:
+return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.totalPages,_that.allHighLightStatus,_that.moreHighLightStatus,_that.highlightDetail,_that.highlightDetailStatus);case _:
   return null;
 
 }
@@ -442,7 +516,7 @@ return $default(_that.highlights,_that.page,_that.pageSize,_that.total,_that.tot
 
 
 class _HighlightState implements HighlightState {
-  const _HighlightState({final  List<HighlightModel> highlights = const [], this.page = 1, this.pageSize = 10, this.total = 0, this.totalPages = 0, this.allHighLightStatus = Status.init, this.moreHighLightStatus = Status.init}): _highlights = highlights;
+  const _HighlightState({final  List<HighlightModel> highlights = const [], this.page = 1, this.pageSize = 10, this.total = 0, this.totalPages = 0, this.allHighLightStatus = Status.init, this.moreHighLightStatus = Status.init, this.highlightDetail = null, this.highlightDetailStatus = Status.init}): _highlights = highlights;
   
 
  final  List<HighlightModel> _highlights;
@@ -458,6 +532,8 @@ class _HighlightState implements HighlightState {
 @override@JsonKey() final  int totalPages;
 @override@JsonKey() final  Status allHighLightStatus;
 @override@JsonKey() final  Status moreHighLightStatus;
+@override@JsonKey() final  HighlightDetailResponse? highlightDetail;
+@override@JsonKey() final  Status highlightDetailStatus;
 
 /// Create a copy of HighlightState
 /// with the given fields replaced by the non-null parameter values.
@@ -469,16 +545,16 @@ _$HighlightStateCopyWith<_HighlightState> get copyWith => __$HighlightStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HighlightState&&const DeepCollectionEquality().equals(other._highlights, _highlights)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize)&&(identical(other.total, total) || other.total == total)&&(identical(other.totalPages, totalPages) || other.totalPages == totalPages)&&(identical(other.allHighLightStatus, allHighLightStatus) || other.allHighLightStatus == allHighLightStatus)&&(identical(other.moreHighLightStatus, moreHighLightStatus) || other.moreHighLightStatus == moreHighLightStatus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HighlightState&&const DeepCollectionEquality().equals(other._highlights, _highlights)&&(identical(other.page, page) || other.page == page)&&(identical(other.pageSize, pageSize) || other.pageSize == pageSize)&&(identical(other.total, total) || other.total == total)&&(identical(other.totalPages, totalPages) || other.totalPages == totalPages)&&(identical(other.allHighLightStatus, allHighLightStatus) || other.allHighLightStatus == allHighLightStatus)&&(identical(other.moreHighLightStatus, moreHighLightStatus) || other.moreHighLightStatus == moreHighLightStatus)&&(identical(other.highlightDetail, highlightDetail) || other.highlightDetail == highlightDetail)&&(identical(other.highlightDetailStatus, highlightDetailStatus) || other.highlightDetailStatus == highlightDetailStatus));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_highlights),page,pageSize,total,totalPages,allHighLightStatus,moreHighLightStatus);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_highlights),page,pageSize,total,totalPages,allHighLightStatus,moreHighLightStatus,highlightDetail,highlightDetailStatus);
 
 @override
 String toString() {
-  return 'HighlightState(highlights: $highlights, page: $page, pageSize: $pageSize, total: $total, totalPages: $totalPages, allHighLightStatus: $allHighLightStatus, moreHighLightStatus: $moreHighLightStatus)';
+  return 'HighlightState(highlights: $highlights, page: $page, pageSize: $pageSize, total: $total, totalPages: $totalPages, allHighLightStatus: $allHighLightStatus, moreHighLightStatus: $moreHighLightStatus, highlightDetail: $highlightDetail, highlightDetailStatus: $highlightDetailStatus)';
 }
 
 
@@ -489,7 +565,7 @@ abstract mixin class _$HighlightStateCopyWith<$Res> implements $HighlightStateCo
   factory _$HighlightStateCopyWith(_HighlightState value, $Res Function(_HighlightState) _then) = __$HighlightStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<HighlightModel> highlights, int page, int pageSize, int total, int totalPages, Status allHighLightStatus, Status moreHighLightStatus
+ List<HighlightModel> highlights, int page, int pageSize, int total, int totalPages, Status allHighLightStatus, Status moreHighLightStatus, HighlightDetailResponse? highlightDetail, Status highlightDetailStatus
 });
 
 
@@ -506,7 +582,7 @@ class __$HighlightStateCopyWithImpl<$Res>
 
 /// Create a copy of HighlightState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? highlights = null,Object? page = null,Object? pageSize = null,Object? total = null,Object? totalPages = null,Object? allHighLightStatus = null,Object? moreHighLightStatus = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? highlights = null,Object? page = null,Object? pageSize = null,Object? total = null,Object? totalPages = null,Object? allHighLightStatus = null,Object? moreHighLightStatus = null,Object? highlightDetail = freezed,Object? highlightDetailStatus = null,}) {
   return _then(_HighlightState(
 highlights: null == highlights ? _self._highlights : highlights // ignore: cast_nullable_to_non_nullable
 as List<HighlightModel>,page: null == page ? _self.page : page // ignore: cast_nullable_to_non_nullable
@@ -515,6 +591,8 @@ as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_no
 as int,totalPages: null == totalPages ? _self.totalPages : totalPages // ignore: cast_nullable_to_non_nullable
 as int,allHighLightStatus: null == allHighLightStatus ? _self.allHighLightStatus : allHighLightStatus // ignore: cast_nullable_to_non_nullable
 as Status,moreHighLightStatus: null == moreHighLightStatus ? _self.moreHighLightStatus : moreHighLightStatus // ignore: cast_nullable_to_non_nullable
+as Status,highlightDetail: freezed == highlightDetail ? _self.highlightDetail : highlightDetail // ignore: cast_nullable_to_non_nullable
+as HighlightDetailResponse?,highlightDetailStatus: null == highlightDetailStatus ? _self.highlightDetailStatus : highlightDetailStatus // ignore: cast_nullable_to_non_nullable
 as Status,
   ));
 }

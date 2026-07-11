@@ -6,11 +6,12 @@ import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/core/widgets/bottom_view.dart';
-import 'package:playon/feature/home/bloc/bloc/banner_ads_bloc.dart';
+import 'package:playon/feature/home/bloc/banner_ads/banner_ads_bloc.dart';
 import 'package:playon/feature/home/presentation/widgets/highlight_card.dart';
 import 'package:playon/feature/home/presentation/widgets/podcast_card.dart';
 import 'package:playon/feature/home/presentation/widgets/reel_highlight_card.dart';
 import 'package:playon/feature/home/presentation/widgets/tornament_card.dart';
+import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
@@ -26,15 +27,10 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     context.read<BannerAdsBloc>().add(BannerAdsEvent.fetchBannerAds());
+    context.read<SeriesBloc>().add(SeriesEvent.getSeriesList());
     super.initState();
   }
 
-  final List images = [
-    {"id": 1, "images": AppImage.background},
-    {"id": 2, "images": AppImage.background},
-    {"id": 3, "images": AppImage.background},
-    {"id": 4, "images": AppImage.background},
-  ];
   final List<Map<String, String>> highlights = [
     {
       "image": AppImage.background,
@@ -93,8 +89,8 @@ class _HomeViewState extends State<HomeView> {
     },
     {
       "image": AppImage.background,
-      "sport": "Cricket",
       "topicName": "Century in style",
+      "sport": "Cricket",
       "topicContent": "Royals seal the series",
     },
   ];
@@ -192,97 +188,191 @@ class _HomeViewState extends State<HomeView> {
           ),
 
           const SizedBox(height: 16),
-          SizedBox(
-            height: 250,
-            child: FocusTraversalGroup(
-              policy:
-                  ReadingOrderTraversalPolicy(), // was OrderedTraversalPolicy()
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  return TvFocusable(
-                    onSelect: () {
-                      AppNavigation.push(
-                        context,
-                        "/trending/${images[index]['id']}",
-                      );
-                    },
-                    child: Container(
-                      width: 220,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              AppImage.tornamentlogo,
-                              fit: BoxFit.cover,
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.black.withOpacity(0.35),
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.75),
-                                  ],
-                                  stops: const [0.0, 0.5, 1.0],
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 12,
-                              left: 12,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(50),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 10,
-                                    sigmaY: 10,
+
+          // Driven by SeriesBloc now — only series where isHomeScreen
+          // AND isTrending are both true show up here (see
+          // SeriesState.trendingSeries).
+          BlocBuilder<SeriesBloc, SeriesState>(
+            builder: (context, state) {
+              if (state.allSeriesStatus == Status.loading &&
+                  state.series.isEmpty) {
+                return const SizedBox(
+                  height: 250,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (state.allSeriesStatus == Status.error &&
+                  state.series.isEmpty) {
+                return SizedBox(
+                  height: 250,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Something went wrong",
+                          style: text17(color: AppColors.white),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            context.read<SeriesBloc>().add(
+                              SeriesEvent.getSeriesList(),
+                            );
+                          },
+                          child: const Text("Retry"),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final trendingSeries = state.series.where((element) =>  element.isTrending).toList();
+
+              if (trendingSeries.isEmpty) {
+                // Nothing flagged isHomeScreen && isTrending — hide the
+                // rail rather than showing an empty scroller.
+                return const SizedBox.shrink();
+              }
+
+              return SizedBox(
+                height: 250,
+                child: FocusTraversalGroup(
+                  policy: ReadingOrderTraversalPolicy(),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: trendingSeries.length,
+                    itemBuilder: (context, index) {
+                      final series = trendingSeries[index];
+
+                      return TvFocusable(
+                        autofocus: index == 0,
+                        onSelect: () {
+                          AppNavigation.push(
+                            context,
+                            "/trending/${series.id}",
+                          );
+                        },
+                        child: Container(
+                          width: 220,
+                          margin: const EdgeInsets.only(right: 16),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                series.banner.isNotEmpty
+                                    ? Image.network(
+                                        series.banner,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Image.asset(
+                                            AppImage.tornamentlogo,
+                                            fit: BoxFit.cover,
+                                          );
+                                        },
+                                        loadingBuilder:
+                                            (context, child, progress) {
+                                          if (progress == null) return child;
+                                          return const Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        },
+                                      )
+                                    : Image.asset(
+                                        AppImage.tornamentlogo,
+                                        fit: BoxFit.cover,
+                                      ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.black.withOpacity(0.35),
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.75),
+                                      ],
+                                      stops: const [0.0, 0.5, 1.0],
+                                    ),
                                   ),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: AppColors.white.withOpacity(0.15),
-                                      border: Border.all(
-                                        color: AppColors.white.withOpacity(0.3),
-                                        width: 1,
+                                ),
+                                Positioned(
+                                  top: 12,
+                                  left: 12,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(50),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 10,
+                                        sigmaY: 10,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.white.withOpacity(
+                                            0.15,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.white.withOpacity(
+                                              0.3,
+                                            ),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: series.tournamentLogo.isNotEmpty
+                                            ? Image.network(
+                                                series.tournamentLogo,
+                                                width: 32,
+                                                height: 32,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Image.asset(
+                                                        AppImage.logo,
+                                                        width: 32,
+                                                        height: 32,
+                                                      );
+                                                    },
+                                              )
+                                            : Image.asset(
+                                                AppImage.logo,
+                                                width: 32,
+                                                height: 32,
+                                              ),
                                       ),
                                     ),
-                                    child: Image.asset(
-                                      AppImage.logo,
-                                      width: 32,
-                                      height: 32,
-                                    ),
                                   ),
                                 ),
-                              ),
+                                Positioned(
+                                  left: 12,
+                                  right: 12,
+                                  bottom: 12,
+                                  child: Text(
+                                    series.title,
+                                    style: text17(color: AppColors.white),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Positioned(
-                              left: 12,
-                              right: 12,
-                              bottom: 12,
-                              child: Text(
-                                "Ghaziabad Premier League 2026",
-                                style: text17(color: AppColors.white),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 30),
 

@@ -37,15 +37,15 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/trending/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        final id = state.pathParameters['id'] ?? "";
         return TrendingDetailPage(id: id);
       },
     ),
     GoRoute(
-      path: '/liveChannelDetail/:id',
+      path: '/liveChannelDetail/:slug',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
-        return LiveChannelDatailPage(id: id);
+        final slug = state.pathParameters['slug']!;
+        return LiveChannelDatailPage(slug: slug);
       },
     ),
     GoRoute(
@@ -58,28 +58,29 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/seriesDetail/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        final id = state.pathParameters['id'] ?? '';
         return SeriesDetailPage(id: id);
       },
     ),
     GoRoute(
       path: '/seriesMatch/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        final id = state.pathParameters['id'] ?? '';
         return SeriesMatchPage(id: id);
       },
     ),
     GoRoute(
       path: '/allHighlightsTornament/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
-        return HighlightTornamentPage(id: id);
+        final id = state.pathParameters['id'] ?? '';
+        final title = state.extra as String? ?? '';
+        return HighlightTornamentPage(id: id, title: title);
       },
     ),
     GoRoute(
       path: '/highlightMatch/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        final id = state.pathParameters['id'] ?? '';
         return HighlightMatchPage(id: id); // ✅ correct page
       },
     ),

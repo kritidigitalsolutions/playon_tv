@@ -2,16 +2,20 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playon/core/models/response/high_light_detail_model.dart';
+import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/core/widgets/media_payler_widget.dart';
+import 'package:playon/feature/highlights/bloc/highlight/highlight_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 
 class HighlightMatchPage extends StatefulWidget {
   const HighlightMatchPage({super.key, required this.id});
-  final int id;
+  final String id; // was `int` — switched to match route/usecase types
 
   @override
   State<HighlightMatchPage> createState() => _HighlightMatchPageState();
@@ -20,16 +24,6 @@ class HighlightMatchPage extends StatefulWidget {
 class _HighlightMatchPageState extends State<HighlightMatchPage> {
   bool _isFullscreen = false;
   int _selectedTabIndex = 0;
-
-  final String _streamUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-  final String _title = 'Raina Superkings vs Migsun Champions';
-  final String _sport = 'CRICKET';
-  final String _state = 'UP';
-  final String _description =
-      'Follow every ball of this high-voltage clash as Raina Superkings '
-      'take on Migsun Champions in what promises to be one of the most '
-      'exciting fixtures of the season. Catch live scores, key moments, '
-      'and full match coverage right here.';
 
   final List<String> _tabs = [
     'Highlights',
@@ -40,6 +34,14 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
     'Event',
     'Comments',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<HighlightBloc>().add(
+          HighlightEvent.highlightDetail(id: widget.id),
+        );
+  }
 
   void _handleFullscreenChanged(bool fullscreen) {
     setState(() => _isFullscreen = fullscreen);
@@ -56,23 +58,101 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocBuilder<HighlightBloc, HighlightState>(
+      builder: (context, state) {
+        if (state.highlightDetailStatus == Status.loading) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (state.highlightDetailStatus == Status.error) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Something went wrong while loading this match.",
+                    style: text16(),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<HighlightBloc>().add(
+                            HighlightEvent.highlightDetail(id: widget.id),
+                          );
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final highlight = state.highlightDetail;
+        if (highlight == null) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: SizedBox.shrink(),
+          );
+        }
+
+        return _HighlightMatchContent(
+          highlight:highlight ,
+          isFullscreen: _isFullscreen,
+          selectedTabIndex: _selectedTabIndex,
+          tabs: _tabs,
+          onFullscreenChanged: _handleFullscreenChanged,
+          onTabChanged: (index) => setState(() => _selectedTabIndex = index),
+        );
+      },
+    );
+  }
+}
+
+/// Split out so the fullscreen/PopScope branch and the scrollable
+/// detail view are both driven by the same fetched [highlight] data.
+class _HighlightMatchContent extends StatelessWidget {
+  const _HighlightMatchContent({
+    required this.highlight,
+    required this.isFullscreen,
+    required this.selectedTabIndex,
+    required this.tabs,
+    required this.onFullscreenChanged,
+    required this.onTabChanged,
+  });
+
+  final HighlightDetailResponse highlight;
+  final bool isFullscreen;
+  final int selectedTabIndex;
+  final List<String> tabs;
+  final ValueChanged<bool> onFullscreenChanged;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
     final player = MediaPlayerWidget(
-      url: _streamUrl,
+      url: highlight.highlight.videoUrl,
       autoPlay: true,
-      isFullscreen: _isFullscreen,
-      onFullscreenChanged: _handleFullscreenChanged,
-      title: _title,
-      isBack: !_isFullscreen,
+      isFullscreen: isFullscreen,
+      onFullscreenChanged: onFullscreenChanged,
+      title: highlight.highlight.title,
+      isBack: !isFullscreen,
       onError: (msg) {
         debugPrint('Player error: $msg');
       },
     );
 
-    if (_isFullscreen) {
+    if (isFullscreen) {
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _handleFullscreenChanged(false);
+          if (!didPop) onFullscreenChanged(false);
         },
         child: Scaffold(backgroundColor: Colors.black, body: player),
       );
@@ -107,7 +187,7 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
 
                   // Match title
                   Text(
-                    _title,
+                    highlight.highlight.title,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -117,36 +197,41 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Sport + state chips
+                  // Sport + category chips
                   Row(
                     children: [
-                      _Chip(text: _sport.toUpperCase()),
-                      const SizedBox(width: 10),
-                      _Chip(text: _state.toUpperCase()),
+                      if (highlight.highlight. series.sport.isNotEmpty)
+                        _Chip(text: highlight .highlight.series.sport.toUpperCase()),
+                      if (highlight .highlight.series.sport.isNotEmpty &&
+                          highlight. highlight. category.isNotEmpty)
+                        const SizedBox(width: 10),
+                      if (highlight.highlight.category.isNotEmpty)
+                        _Chip(text: highlight.highlight.category.toUpperCase()),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Description
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.25),
+                  if (highlight.highlight.description.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.25),
+                        ),
+                      ),
+                      child: Text(
+                        highlight.highlight.description,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 16,
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      _description,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 16,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 20),
 
                   // League info
@@ -162,14 +247,25 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadiusGeometry.circular(10),
-                          child: Image.asset(
-                            AppImage.background,
+                          child: Image.network(
+                            highlight.highlight.series.tournamentLogo,
                             fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              AppImage.background,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text("Gaziabad Premier League 2026", style: text20()),
+                      Expanded(
+                        child: Text(
+                          highlight.highlight.series.title,
+                          style: text20(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -186,9 +282,8 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
                         children: [
                           Expanded(
                             child: _MatchVersus(
-                              image: AppImage.tornamentlogo,
-                              teamName: "Raina Superkings",
-                              point: 0,
+                              image: highlight.highlight.teamA.logo,
+                              teamName: highlight.highlight.teamA.name,
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -200,15 +295,19 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
                                   color: AppColors.white.withAlpha(60),
                                 ),
                               ),
-                              Text("Completed", style: text16()),
+                              Text(
+                                highlight.highlight.series.status.isNotEmpty
+                                    ? highlight.highlight.series.status
+                                    : "Completed",
+                                style: text16(),
+                              ),
                             ],
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _MatchVersus(
-                              image: AppImage.tornamentlogo,
-                              teamName: "Migsun Champions",
-                              point: 0,
+                              image: highlight.highlight.teamB.logo,
+                              teamName: highlight.highlight.teamB.name,
                             ),
                           ),
                         ],
@@ -219,18 +318,14 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
 
                   // AppTabBar
                   AppTabBar(
-                    tabs: _tabs,
-                    selectedIndex: _selectedTabIndex,
-                    onChanged: (index) {
-                      setState(() {
-                        _selectedTabIndex = index;
-                      });
-                    },
+                    tabs: tabs,
+                    selectedIndex: selectedTabIndex,
+                    onChanged: onTabChanged,
                   ),
                   const SizedBox(height: 16),
 
                   // Tab Content
-                  _buildTabContent(_selectedTabIndex),
+                  _buildTabContent(selectedTabIndex),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -263,7 +358,7 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
   }
 }
 
-/// Small pill-shaped label used for the sport/state tags
+/// Small pill-shaped label used for the sport/category tags
 class _Chip extends StatelessWidget {
   final String text;
   const _Chip({required this.text});
@@ -293,11 +388,9 @@ class _MatchVersus extends StatelessWidget {
     super.key,
     required this.image,
     required this.teamName,
-    required this.point,
   });
   final String image;
   final String teamName;
-  final double point;
 
   @override
   Widget build(BuildContext context) {
@@ -312,13 +405,18 @@ class _MatchVersus extends StatelessWidget {
           color: AppColors.background.withAlpha(60),
           child: ClipRRect(
             borderRadius: BorderRadiusGeometry.circular(200),
-            child: Image.asset(image, fit: BoxFit.cover),
+            child: Image.network(
+              image,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Image.asset(
+                AppImage.tornamentlogo,
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 10),
         Text(textAlign: TextAlign.center, teamName, style: text16()),
-        const SizedBox(height: 10),
-        Text(point.toString(), style: text16(color: AppColors.primary)),
       ],
     );
   }

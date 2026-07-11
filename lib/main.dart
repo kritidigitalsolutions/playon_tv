@@ -27,6 +27,11 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => InjectionBlock.authBloc),
         BlocProvider(create: (context) => InjectionBlock.bannerAdsBloc),
         BlocProvider(create: (context) => InjectionBlock.highlightBloc),
+        BlocProvider(create: (context) => InjectionBlock.seriesBloc),
+        BlocProvider(create: (context) => InjectionBlock.channelCatagoryBloc),
+        BlocProvider(create: (context) => InjectionBlock.socialMediaCubit),
+        BlocProvider(create: (context) => InjectionBlock.channelsBloc),
+        BlocProvider(create: (context) => InjectionBlock.watchLiveBloc),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

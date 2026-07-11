@@ -10,5 +10,7 @@ abstract class HighlightState with _$HighlightState {
     @Default(0) int totalPages,
     @Default(Status.init) Status allHighLightStatus,
     @Default(Status.init) Status moreHighLightStatus,
+    @Default(null) HighlightDetailResponse? highlightDetail,
+    @Default(Status.init)Status highlightDetailStatus,
   }) = _HighlightState;
 }
