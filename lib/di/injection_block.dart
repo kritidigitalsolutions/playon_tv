@@ -30,4 +30,7 @@ class InjectionBlock {
   static MatchBloc get matchBloc => MatchBloc(
     matchDetailUsecase: getIt<MatchDetailUsecase>(),
   );
+  static StarPayerCubit get starPayerCubit => StarPayerCubit(
+    allStarPlayerUseCase: getIt<AllStarPlayerUseCase>(),
+  );
 }

@@ -36,6 +36,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => InjectionBlock.channelsBloc),
         BlocProvider(create: (context) => InjectionBlock.watchLiveBloc),
         BlocProvider(create: (context) => InjectionBlock.matchBloc),
+        BlocProvider(create: (context) => InjectionBlock.starPayerCubit),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

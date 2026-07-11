@@ -1,24 +1,53 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:playon/core/models/response/star_player_model.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/static/app_color.dart';
 
 class ReelHighlightCard extends StatelessWidget {
   const ReelHighlightCard({
     super.key,
-    required this.image,
-    required this.sport,
-    required this.topicName,
-    required this.topicContent,
+    required this.starPlayerResponse,
   });
 
-  final String image;
-  final String sport;
-  final String topicName;
-  final String topicContent;
+  final StarPlayerResponse starPlayerResponse;
 
   @override
   Widget build(BuildContext context) {
+    // Get the first highlight from the response
+    final highlight = starPlayerResponse.highlights.isNotEmpty
+        ? starPlayerResponse.highlights.first
+        : null;
+
+    // If no highlight exists, show a placeholder
+    if (highlight == null) {
+      return Container(
+        width: 200,
+        height: 260,
+        margin: const EdgeInsets.only(right: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey[800],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.error_outline,
+            color: Colors.white54,
+            size: 40,
+          ),
+        ),
+      );
+    }
+
+    // Get sport name safely
+    final sportName = highlight.sport?.name ?? '';
+
+    // Format duration (remove "min" if already present)
+    String durationText = highlight.duration;
+    if (!durationText.contains('min') && durationText.isNotEmpty) {
+      durationText = '$durationText min';
+    }
+
     return Container(
       width: 200,
       height: 260,
@@ -29,9 +58,33 @@ class ReelHighlightCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background image
-            Image.asset(image, fit: BoxFit.cover),
+            Image.network(
+              highlight.thumbnail,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[800],
+                  child: const Icon(
+                    Icons.broken_image,
+                    color: Colors.white54,
+                    size: 40,
+                  ),
+                );
+              },
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                );
+              },
+            ),
 
-            // Single gradient layer only — no extra flat black tint
+            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -48,7 +101,7 @@ class ReelHighlightCard extends StatelessWidget {
               ),
             ),
 
-            // Sport tag — top-left pill, distinct accent color (not black)
+            // Sport tag — top-left
             Positioned(
               top: 10,
               left: 10,
@@ -59,12 +112,46 @@ class ReelHighlightCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
-                  sport.toUpperCase(),
+                  sportName.toUpperCase(),
                   style: text14(color: AppColors.white).copyWith(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.6,
                   ),
+                ),
+              ),
+            ),
+
+            // Player name tag — top-right
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.star,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      highlight.playerName,
+                      style: text14(color: AppColors.white).copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -85,7 +172,7 @@ class ReelHighlightCard extends StatelessWidget {
                         width: 1,
                       ),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.play_arrow_rounded,
                       color: AppColors.white,
                       size: 26,
@@ -95,7 +182,28 @@ class ReelHighlightCard extends StatelessWidget {
               ),
             ),
 
-            // Topic name + content — bottom
+            // Duration badge — bottom-right
+            Positioned(
+              bottom: 56,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  durationText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+
+            // Title and team — bottom
             Positioned(
               left: 10,
               right: 10,
@@ -105,20 +213,62 @@ class ReelHighlightCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    topicName,
+                    highlight.title,
                     style: text17(
                       color: AppColors.white,
-                    ).copyWith(fontWeight: FontWeight.w600, fontSize: 14),
+                    ).copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    topicContent,
-                    style: text14(color: AppColors.white.withAlpha(180)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      if (highlight.team.isNotEmpty) ...[
+                        const Icon(
+                          Icons.people_outline,
+                          size: 12,
+                          color: Colors.white54,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            highlight.team,
+                            style: text14(color: AppColors.white.withAlpha(180))
+                                .copyWith(fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                  // Premium badge if premium
+                  if (highlight.isPremium)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: const Text(
+                          'PREMIUM',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

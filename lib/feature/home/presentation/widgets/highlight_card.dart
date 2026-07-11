@@ -31,7 +31,7 @@ class HighlightCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Background image
-            Image.asset(image, fit: BoxFit.cover),
+            Image.network(image, fit: BoxFit.cover),
 
             // Overall dark tint — stronger blackish look
             Container(color: Colors.black.withOpacity(0.55)), // ← was 0.25

@@ -26,4 +26,5 @@ class AppUrl {
   static String matchDetail({required String id}){
     return "$baseUrl/api/matches/$id";
   }
+  static String starPlayer="$baseUrl/api/star-players";
 }

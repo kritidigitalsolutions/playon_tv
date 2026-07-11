@@ -643,7 +643,7 @@ class _HighlightsTab extends StatelessWidget {
 
           return TvFocusable(
             onSelect: () {
-              // navigate to highlight/video player
+              AppNavigation.push(context, "highlightMatch/${item.id}");
             },
             child: AnimatedBox(
               width: double.infinity,

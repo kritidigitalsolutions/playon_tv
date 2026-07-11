@@ -2,12 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_text_field.dart';
-import 'package:playon/feature/home/presentation/widgets/cricket_view.dart';
-import 'package:playon/feature/home/presentation/widgets/football_view.dart';
-import 'package:playon/feature/home/presentation/widgets/hockey_view.dart';
-import 'package:playon/feature/home/presentation/widgets/home_view.dart';
-import 'package:playon/feature/home/presentation/widgets/khoko_view.dart';
-import 'package:playon/feature/home/presentation/widgets/tennis_view.dart';
+import 'package:playon/feature/home/presentation/widgets/sports_view.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
@@ -21,14 +16,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
-  final views = [
-    HomeView(),
-    CricketView(),
-    FootballView(),
-    HockeyView(),
-    KhokoView(),
-    TennisView(),
-  ];
+  
   final tabs = const [
     "HOME",
     "CRICKET",
@@ -37,6 +25,26 @@ class _HomePageState extends State<HomePage> {
     "KHOKHO",
     "KABADDI",
   ];
+
+  // Map tabs to their sport filter values
+  String _getSportFilter(int index) {
+    switch (index) {
+      case 0:
+        return 'HOME';
+      case 1:
+        return 'CRICKET';
+      case 2:
+        return 'FOOTBALL';
+      case 3:
+        return 'HOCKEY';
+      case 4:
+        return 'KHOKHO';
+      case 5:
+        return 'KABADDI';
+      default:
+        return 'HOME';
+    }
+  }
 
   final searchController = TextEditingController();
 
@@ -51,20 +59,14 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: BackgroundWithOneLight(
-        // Whole page is one traversal group so D-pad up/down/left/right
-        // moves focus in reading order across top bar -> tabs -> content.
         child: FocusTraversalGroup(
           policy: OrderedTraversalPolicy(),
           child: Column(
             children: [
               _buildTopBar(controller: searchController),
-
               Expanded(
                 child: Column(
                   children: [
-                    // If AppTabBar isn't focus-aware yet, share its source
-                    // and I'll wrap each tab in TvFocusable too. For now
-                    // remote select still works via mouse/touch fallback.
                     AppTabBar(
                       tabs: tabs,
                       selectedIndex: selectedIndex,
@@ -74,11 +76,9 @@ class _HomePageState extends State<HomePage> {
                         });
                       },
                     ),
-
                     Expanded(
-                      child: IndexedStack(
-                        index: selectedIndex,
-                        children: views,
+                      child: SportsView(
+                        sportFilter: _getSportFilter(selectedIndex),
                       ),
                     ),
                   ],
@@ -97,18 +97,12 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         children: [
           Image.asset(AppImage.logo, width: 120, height: 55, fit: BoxFit.cover),
-
           const SizedBox(width: 30),
-
-          // Search field: TV remotes can open the keyboard on select.
-          // autofocus true so the page always starts with something focused.
           Expanded(
             child: TvFocusable(
               autofocus: true,
               borderRadius: BorderRadius.circular(30),
               onSelect: () {
-                FocusScope.of(context).requestFocus(FocusNode());
-                // opens the on-screen keyboard for the text field
                 _searchFieldFocus.requestFocus();
               },
               child: AppTextField(
@@ -126,9 +120,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
           const SizedBox(width: 20),
-
           TvFocusable(
             borderRadius: BorderRadius.circular(50),
             onSelect: () {},
@@ -138,9 +130,7 @@ class _HomePageState extends State<HomePage> {
               child: const Icon(Icons.person),
             ),
           ),
-
           const SizedBox(width: 15),
-
           TvFocusable(
             borderRadius: BorderRadius.circular(50),
             onSelect: () {
@@ -152,7 +142,7 @@ class _HomePageState extends State<HomePage> {
               child: const Icon(Icons.notifications, color: AppColors.warning),
             ),
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
         ],
       ),
     );

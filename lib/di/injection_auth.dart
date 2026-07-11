@@ -88,4 +88,10 @@ Future<void> _authDependency() async {
     seriesDatasource: getIt<SeriesDatasource>(),
   );
   getIt.registerLazySingleton<MatchDetailUsecase>(() => matchDetailUsecase);
+
+  //All Star Player
+  final allStarPlayerUsecase = AllStarPlayerUseCase(
+    homeDatasource: getIt<HomeDatasource>(),
+  );
+  getIt.registerLazySingleton<AllStarPlayerUseCase>(() => allStarPlayerUsecase);
 }

@@ -282,12 +282,12 @@ $MatchStateCopyWith<MatchState> get copyWith => _$MatchStateCopyWithImpl<MatchSt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MatchState&&const DeepCollectionEquality().equals(other.matchDetail, matchDetail)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MatchState&&(identical(other.matchDetail, matchDetail) || other.matchDetail == matchDetail)&&(identical(other.status, status) || other.status == status));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(matchDetail),status);
+int get hashCode => Object.hash(runtimeType,matchDetail,status);
 
 @override
 String toString() {
@@ -480,12 +480,12 @@ _$MatchStateCopyWith<_MatchState> get copyWith => __$MatchStateCopyWithImpl<_Mat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MatchState&&const DeepCollectionEquality().equals(other.matchDetail, matchDetail)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MatchState&&(identical(other.matchDetail, matchDetail) || other.matchDetail == matchDetail)&&(identical(other.status, status) || other.status == status));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(matchDetail),status);
+int get hashCode => Object.hash(runtimeType,matchDetail,status);
 
 @override
 String toString() {
