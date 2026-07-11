@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:playon/di/injection.dart';
 import 'package:playon/static/app_route.dart';
 
 void main() async {
+  // Must be the very first call — Injection.initial() and the
+  // HardwareKeyboard handler below both touch Flutter engine
+  // services, which aren't available until the binding exists.
+  WidgetsFlutterBinding.ensureInitialized();
+
   await Injection.initial();
 
-  WidgetsFlutterBinding.ensureInitialized();
   HardwareKeyboard.instance.addHandler((KeyEvent event) {
     debugPrint('RAW KEY: ${event.logicalKey} (${event.runtimeType})');
     return false; // don't consume, just observe
   });
-  MediaKit.ensureInitialized();
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -32,6 +35,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => InjectionBlock.socialMediaCubit),
         BlocProvider(create: (context) => InjectionBlock.channelsBloc),
         BlocProvider(create: (context) => InjectionBlock.watchLiveBloc),
+        BlocProvider(create: (context) => InjectionBlock.matchBloc),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,

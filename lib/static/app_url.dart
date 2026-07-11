@@ -23,4 +23,7 @@ class AppUrl {
   static String watchLive({required String slug}){
     return "$baseUrl/api/channels/$slug/watch";
   }
+  static String matchDetail({required String id}){
+    return "$baseUrl/api/matches/$id";
+  }
 }

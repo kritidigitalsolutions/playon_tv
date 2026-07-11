@@ -3,22 +3,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:playon/core/models/response/series_detail_model.dart';
+import 'package:playon/core/models/response/match_detail_model.dart' show MatchModel;
 import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/core/widgets/media_payler_widget.dart';
+import 'package:playon/feature/series/bloc/match/match_bloc.dart';
 import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
 
-// Fallback used only if a match genuinely has no streamUrl yet (e.g. still
-// being tested against a placeholder backend). Once every match record has
-// a real streamUrl this can be deleted.
+// Fallback used only if a match genuinely has no streamUrl yet
 const String _placeholderStreamUrl =
-    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';//DEMO
+    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 
 class SeriesMatchPage extends StatefulWidget {
   const SeriesMatchPage({super.key, required this.id});
@@ -50,28 +49,35 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Load match details from MatchBloc
+    context.read<MatchBloc>().add(MatchEvent.matchDetail(id: widget.id));
+  }
+
+  @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
-  MatchModel? _findMatch(SeriesState state) {
-    final matches = state.seriesDetail?.matches;
-    if (matches == null) return null;
-    for (final m in matches) {
-      if (m.id == widget.id) return m;
-    }
-    return null;
-  }
-
-  String _formatMatchDate(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return '';
+  String _formatMatchDate(DateTime? dateTime) {
+    if (dateTime == null) return '';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
-    final local = dt.toLocal();
+    final local = dateTime.toLocal();
     final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
     final period = local.hour >= 12 ? 'PM' : 'AM';
     final minute = local.minute.toString().padLeft(2, '0');
@@ -85,21 +91,24 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SeriesBloc, SeriesState>(
-      builder: (context, state) {
-        final match = _findMatch(state);
+    // Use MultiBlocListener or separate BlocBuilders
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: BlocBuilder<MatchBloc, MatchState>(
+        builder: (context, matchState) {
+          // Get series data from SeriesBloc
+          final seriesState = context.watch<SeriesBloc>().state;
+          
+          final match = matchState.matchDetail;
 
-        if (match == null && state.seriesDetailStatus == Status.loading) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+          if (match == null && matchState.status == Status.loading) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
-        if (match == null) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
+          if (match == null) {
+            return SafeArea(
               child: Column(
                 children: [
                   Align(
@@ -119,23 +128,23 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
                   ),
                 ],
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        return _MatchContent(
-          match: match,
-          seriesTitle: state.seriesDetail?.series.title,
-          seriesLogo: state.seriesDetail?.series.tournamentLogo,
-          isFullscreen: _isFullscreen,
-          selectedTabIndex: _selectedTabIndex,
-          tabs: _tabs,
-          formatMatchDate: _formatMatchDate,
-          titleCase: _titleCase,
-          onFullscreenChanged: _handleFullscreenChanged,
-          onTabChanged: (index) => setState(() => _selectedTabIndex = index),
-        );
-      },
+          return _MatchContent(
+            match: match.match,
+            seriesTitle: seriesState.seriesDetail?.series.title,
+            seriesLogo: seriesState.seriesDetail?.series.tournamentLogo,
+            isFullscreen: _isFullscreen,
+            selectedTabIndex: _selectedTabIndex,
+            tabs: _tabs,
+            formatMatchDate: _formatMatchDate,
+            titleCase: _titleCase,
+            onFullscreenChanged: _handleFullscreenChanged,
+            onTabChanged: (index) => setState(() => _selectedTabIndex = index),
+          );
+        },
+      ),
     );
   }
 }
@@ -160,7 +169,7 @@ class _MatchContent extends StatelessWidget {
   final bool isFullscreen;
   final int selectedTabIndex;
   final List<String> tabs;
-  final String Function(String iso) formatMatchDate;
+  final String Function(DateTime?) formatMatchDate;
   final String Function(String value) titleCase;
   final ValueChanged<bool> onFullscreenChanged;
   final ValueChanged<int> onTabChanged;
@@ -171,7 +180,10 @@ class _MatchContent extends StatelessWidget {
         ? match.title
         : '${match.teamA} vs ${match.teamB}';
 
-    final streamUrl = _placeholderStreamUrl;
+    // Use the actual stream URL from the API, fallback to placeholder
+    final streamUrl = match.stream.streamUrl.isNotEmpty
+        ? match.stream.streamUrl
+        : _placeholderStreamUrl;
 
     final player = MediaPlayerWidget(
       url: streamUrl,
@@ -200,240 +212,234 @@ class _MatchContent extends StatelessWidget {
     final formattedDate = formatMatchDate(match.matchDate);
     final status = match.status.isNotEmpty ? titleCase(match.status) : '';
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: BackgroundWithOneLight(
-        child: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: overscanPadding,
-              vertical: 16,
-            ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Video
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: player,
-                    ),
+    return BackgroundWithOneLight(
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: overscanPadding,
+            vertical: 16,
+          ),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Video
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: player,
                   ),
-                  const SizedBox(height: 20),
+                ),
+                const SizedBox(height: 20),
 
-                  // Match title
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
+                // Match title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
                   ),
+                ),
+                const SizedBox(height: 10),
+
+                // Sport + status chips, venue/date on their own line
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    if (match.sport.isNotEmpty)
+                      _Chip(text: match.sport.toUpperCase()),
+                    if (status.isNotEmpty)
+                      _Chip(
+                        text: status.toUpperCase(),
+                        color: _statusColor(match.status),
+                      ),
+                    // Stream quality chip
+                    if (match.stream.quality.isNotEmpty)
+                      _Chip(
+                        text: match.stream.quality.toUpperCase(),
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                  ],
+                ),
+                if (match.venue.isNotEmpty || formattedDate.isNotEmpty) ...[
                   const SizedBox(height: 10),
-
-                  // Sport + status chips, venue/date on their own line
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 8,
+                  Row(
                     children: [
-                      if (match.sport.isNotEmpty)
-                        _Chip(text: match.sport.toUpperCase()),
-                      if (status.isNotEmpty)
-                        _Chip(
-                          text: status.toUpperCase(),
-                          color: _statusColor(match.status),
+                      if (match.venue.isNotEmpty) ...[
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 16,
+                          color: Colors.white54,
                         ),
-                    ],
-                  ),
-                  if (match.venue.isNotEmpty || formattedDate.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        if (match.venue.isNotEmpty) ...[
-                          const Icon(
-                            Icons.location_on_outlined,
-                            size: 16,
-                            color: Colors.white54,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              match.venue,
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 13,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                        if (match.venue.isNotEmpty &&
-                            formattedDate.isNotEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              '•',
-                              style: TextStyle(color: Colors.white38),
-                            ),
-                          ),
-                        if (formattedDate.isNotEmpty) ...[
-                          const Icon(
-                            Icons.schedule,
-                            size: 16,
-                            color: Colors.white54,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            formattedDate,
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            match.venue,
                             style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 13,
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-
-                  // Description
-                  if (match.description.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.25),
-                        ),
-                      ),
-                      child: Text(
-                        match.description,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 16,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  if (match.description.isNotEmpty) const SizedBox(height: 20),
-
-                  // League info
-                  if (seriesTitle != null && seriesTitle!.isNotEmpty)
-                    Row(
-                      children: [
-                        Container(
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: AppColors.background.withAlpha(60),
-                            border: Border.all(color: AppColors.background),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: (seriesLogo != null && seriesLogo!.isNotEmpty)
-                                ? Image.network(
-                                    seriesLogo!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Image.asset(
-                                      AppImage.background,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )
-                                : Image.asset(
-                                    AppImage.background,
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            seriesTitle!,
-                            style: text20(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                    ),
-                  if (seriesTitle != null && seriesTitle!.isNotEmpty)
-                    const SizedBox(height: 20),
-
-                  // Match vs card
-                  if (match.teamA.isNotEmpty && match.teamB.isNotEmpty)
-                    Center(
-                      child: AnimatedBox(
-                        padding: const EdgeInsets.all(12),
-                        width: MediaQuery.sizeOf(context).width * 0.4,
-                        color: AppColors.background.withAlpha(60),
-                        border: Border.all(color: AppColors.background),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _MatchVersus(
-                                image: match.teamALogo,
-                                teamName: match.teamA,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              children: [
-                                Text(
-                                  "VS",
-                                  style: text18(
-                                    color: AppColors.white.withAlpha(60),
-                                  ),
-                                ),
-                                if (status.isNotEmpty)
-                                  Text(status, style: text16()),
-                              ],
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _MatchVersus(
-                                image: match.teamBLogo,
-                                teamName: match.teamB,
-                              ),
-                            ),
-                          ],
+                      if (match.venue.isNotEmpty && formattedDate.isNotEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            '•',
+                            style: TextStyle(color: Colors.white38),
+                          ),
                         ),
+                      if (formattedDate.isNotEmpty) ...[
+                        const Icon(
+                          Icons.schedule,
+                          size: 16,
+                          color: Colors.white54,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 20),
+
+                // Description
+                if (match.description.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.25),
                       ),
                     ),
-                  if (match.teamA.isNotEmpty && match.teamB.isNotEmpty)
-                    const SizedBox(height: 20),
-
-                  // AppTabBar
-                  AppTabBar(
-                    tabs: tabs,
-                    selectedIndex: selectedTabIndex,
-                    onChanged: onTabChanged,
+                    child: Text(
+                      match.description,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 16,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                if (match.description.isNotEmpty) const SizedBox(height: 20),
 
-                  // Tab Content
-                  //
-                  // NOTE: none of these tabs have a backing data model yet
-                  // (no squad/scorecard/stats/performers/event/comments
-                  // fields exist on MatchModel or anywhere else you've
-                  // shared), so they're still illustrative mock content.
-                  // The team names in the Squad tab are now real
-                  // (match.teamA / match.teamB); everything else in these
-                  // tabs will need real endpoints + models before it can
-                  // be wired up the same way the header above now is.
-                  _buildTabContent(selectedTabIndex, match),
+                // League info
+                if (seriesTitle != null && seriesTitle!.isNotEmpty)
+                  Row(
+                    children: [
+                      Container(
+                        height: 50,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.background.withAlpha(60),
+                          border: Border.all(color: AppColors.background),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child:
+                              (seriesLogo != null && seriesLogo!.isNotEmpty)
+                              ? Image.network(
+                                  seriesLogo!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                    AppImage.background,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Image.asset(
+                                  AppImage.background,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          seriesTitle!,
+                          style: text20(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (seriesTitle != null && seriesTitle!.isNotEmpty)
                   const SizedBox(height: 20),
-                ],
-              ),
+
+                // Match vs card
+                if (match.teamA.isNotEmpty && match.teamB.isNotEmpty)
+                  Center(
+                    child: AnimatedBox(
+                      padding: const EdgeInsets.all(12),
+                      width: MediaQuery.sizeOf(context).width * 0.4,
+                      color: AppColors.background.withAlpha(60),
+                      border: Border.all(color: AppColors.background),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _MatchVersus(
+                              image: match.teamALogo,
+                              teamName: match.teamA,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            children: [
+                              Text(
+                                "VS",
+                                style: text18(
+                                  color: AppColors.white.withAlpha(60),
+                                ),
+                              ),
+                              if (status.isNotEmpty)
+                                Text(status, style: text16()),
+                            ],
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _MatchVersus(
+                              image: match.teamBLogo,
+                              teamName: match.teamB,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (match.teamA.isNotEmpty && match.teamB.isNotEmpty)
+                  const SizedBox(height: 20),
+
+                // AppTabBar
+                AppTabBar(
+                  tabs: tabs,
+                  selectedIndex: selectedTabIndex,
+                  onChanged: onTabChanged,
+                ),
+                const SizedBox(height: 16),
+
+                // Tab Content
+                _buildTabContent(selectedTabIndex, match),
+                const SizedBox(height: 20),
+              ],
             ),
           ),
         ),
@@ -457,7 +463,7 @@ class _MatchContent extends StatelessWidget {
   Widget _buildTabContent(int index, MatchModel match) {
     switch (index) {
       case 0:
-        return _HighlightsTab();
+        return _HighlightsTab(matchId: match.id);
       case 1:
         return _SquadTab(teamA: match.teamA, teamB: match.teamB);
       case 2:
@@ -524,10 +530,8 @@ class _MatchVersus extends StatelessWidget {
                 ? Image.network(
                     image,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Image.asset(
-                      AppImage.tornamentlogo,
-                      fit: BoxFit.cover,
-                    ),
+                    errorBuilder: (_, __, ___) =>
+                        Image.asset(AppImage.tornamentlogo, fit: BoxFit.cover),
                   )
                 : Image.asset(AppImage.tornamentlogo, fit: BoxFit.cover),
           ),
@@ -540,12 +544,15 @@ class _MatchVersus extends StatelessWidget {
 }
 
 // ==================== TAB CONTENT WIDGETS ====================
-// These remain mock content — see the NOTE above build() for why.
 
-/// Highlights Tab
+/// Highlights Tab - Now with real match ID
 class _HighlightsTab extends StatelessWidget {
+  final String matchId;
+  const _HighlightsTab({required this.matchId});
+
   @override
   Widget build(BuildContext context) {
+    // TODO: Fetch real highlights using matchId
     return Column(
       children: [
         _VideoHighlightCard(
@@ -675,7 +682,6 @@ class _SquadTab extends StatelessWidget {
       children: [
         _SquadSection(
           teamName: teamA.isNotEmpty ? teamA : 'Team A',
-          // Mock roster — no players endpoint exists yet.
           players: const [
             'Player 1 (C)',
             'Player 2 (WK)',

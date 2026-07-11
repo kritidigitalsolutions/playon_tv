@@ -10,7 +10,7 @@ Future<void> _authDependency() async {
   //Series Datasource
   final seriesDatasource = SeriesDatasource();
   getIt.registerLazySingleton<SeriesDatasource>(() => seriesDatasource);
-  
+
   //Highlight Datasource
   final highlightDatasource = HighLightDatasource();
   getIt.registerLazySingleton<HighLightDatasource>(() => highlightDatasource);
@@ -43,12 +43,14 @@ Future<void> _authDependency() async {
     highLightDatasource: getIt<HighLightDatasource>(),
   );
   getIt.registerLazySingleton<AllHighlightUsecase>(() => allHighlightUsecase);
-//Highlight Detail
+  //Highlight Detail
   final highlightDetailUsecase = HighLightDeatilUsecase(
     highLightDatasource: getIt<HighLightDatasource>(),
   );
-  getIt.registerLazySingleton<HighLightDeatilUsecase>(() => highlightDetailUsecase);
-  
+  getIt.registerLazySingleton<HighLightDeatilUsecase>(
+    () => highlightDetailUsecase,
+  );
+
   //All Series
   final allSeriesUsecase = AllSeriesUsecase(
     seriesDatasource: getIt<SeriesDatasource>(),
@@ -66,7 +68,9 @@ Future<void> _authDependency() async {
   final channelCatagoryUsecase = ChannelCatagoryUsecase(
     liveTvDatasource: getIt<LiveTvDatasource>(),
   );
-  getIt.registerLazySingleton<ChannelCatagoryUsecase>(() => channelCatagoryUsecase);
+  getIt.registerLazySingleton<ChannelCatagoryUsecase>(
+    () => channelCatagoryUsecase,
+  );
 
   //All Channel
   final allChannelUsecase = AllChannelUsecase(
@@ -79,6 +83,9 @@ Future<void> _authDependency() async {
     liveTvDatasource: getIt<LiveTvDatasource>(),
   );
   getIt.registerLazySingleton<WatchLiveUsecase>(() => watchLiveUsecase);
-
-  
+  //Match Detail
+  final matchDetailUsecase = MatchDetailUsecase(
+    seriesDatasource: getIt<SeriesDatasource>(),
+  );
+  getIt.registerLazySingleton<MatchDetailUsecase>(() => matchDetailUsecase);
 }

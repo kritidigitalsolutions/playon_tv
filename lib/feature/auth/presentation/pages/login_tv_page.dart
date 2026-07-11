@@ -239,6 +239,8 @@ class _LoginTvPageState extends State<LoginTvPage> {
                               autofocus: true,
                               onKeyEvent: _handlePinKey,
                               child: Pinput(
+                                keyboardType: TextInputType.number,
+                                
                                 onChanged: (value) {
                                   context.read<AuthBloc>().add(
                                     AuthEvent.otp(value),
@@ -260,11 +262,10 @@ class _LoginTvPageState extends State<LoginTvPage> {
                                     ),
                                   ],
                                 ),
-                                readOnly: true,
-                                useNativeKeyboard: false,
-                                enableSuggestions: false,
-                                toolbarEnabled: false,
-                                keyboardType: TextInputType.none,
+                                readOnly: false,
+                                useNativeKeyboard: true,
+                                // enableSuggestions: false,
+                                // toolbarEnabled: false,
                               ),
                             ),
                             const SizedBox(height: 32),

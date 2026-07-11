@@ -27,4 +27,7 @@ class InjectionBlock {
   static WatchLiveBloc get watchLiveBloc => WatchLiveBloc(
     watchLiveUsecase: getIt<WatchLiveUsecase>(),
   );
+  static MatchBloc get matchBloc => MatchBloc(
+    matchDetailUsecase: getIt<MatchDetailUsecase>(),
+  );
 }

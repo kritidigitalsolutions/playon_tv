@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
+import 'package:video_player/video_player.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/static/app_color.dart';
 
@@ -9,18 +9,25 @@ const _kAccentSoft = Color(0xFFFF6B5B);
 const _kPanelBg = Color(0xFF0F0F14);
 const _kPanelWidth = 400.0;
 
-enum TVSettingsCategory { speed, quality, subtitlesAudio }
+/// video_player/chewie only expose a public `setPlaybackSpeed` API —
+/// there's no equivalent of media_kit's VideoTrack/SubtitleTrack/
+/// AudioTrack lists to manually switch quality or embedded subtitle/
+/// audio tracks (ExoPlayer/AVPlayer negotiate that internally and
+/// don't surface it through the plugin). So this panel only covers
+/// speed; quality and subtitles/audio categories were removed rather
+/// than wired up to nothing.
+enum TVSettingsCategory { speed }
 
 class TVSettingsPanel extends StatefulWidget {
   const TVSettingsPanel({
     super.key,
     required this.category,
-    required this.player,
+    required this.controller,
     required this.onClose,
   });
 
   final TVSettingsCategory category;
-  final Player player;
+  final VideoPlayerController controller;
   final VoidCallback onClose;
 
   @override
@@ -52,10 +59,6 @@ class _TVSettingsPanelState extends State<TVSettingsPanel>
     switch (widget.category) {
       case TVSettingsCategory.speed:
         return 'Playback Speed';
-      case TVSettingsCategory.quality:
-        return 'Video Quality';
-      case TVSettingsCategory.subtitlesAudio:
-        return 'Subtitles & Audio';
     }
   }
 
@@ -63,10 +66,6 @@ class _TVSettingsPanelState extends State<TVSettingsPanel>
     switch (widget.category) {
       case TVSettingsCategory.speed:
         return Icons.speed_rounded;
-      case TVSettingsCategory.quality:
-        return Icons.high_quality_rounded;
-      case TVSettingsCategory.subtitlesAudio:
-        return Icons.subtitles_rounded;
     }
   }
 
@@ -188,18 +187,14 @@ class _TVSettingsPanelState extends State<TVSettingsPanel>
   Widget _buildBody() {
     switch (widget.category) {
       case TVSettingsCategory.speed:
-        return _SpeedList(player: widget.player);
-      case TVSettingsCategory.quality:
-        return _QualityList(player: widget.player);
-      case TVSettingsCategory.subtitlesAudio:
-        return _SubtitleAudioList(player: widget.player);
+        return _SpeedList(controller: widget.controller);
     }
   }
 }
 
 class _SpeedList extends StatefulWidget {
-  const _SpeedList({required this.player});
-  final Player player;
+  const _SpeedList({required this.controller});
+  final VideoPlayerController controller;
 
   @override
   State<_SpeedList> createState() => _SpeedListState();
@@ -210,141 +205,26 @@ class _SpeedListState extends State<_SpeedList> {
 
   @override
   Widget build(BuildContext context) {
-    final player = widget.player;
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      itemCount: _speeds.length,
-      itemBuilder: (context, i) {
-        final s = _speeds[i];
-        final selected = player.state.rate == s;
-        return _TVOptionRow(
-          autofocus: selected,
-          icon: Icons.speed_rounded,
-          label: s == 1.0 ? 'Normal' : '${s}x',
-          selected: selected,
-          onSelect: () => setState(() => player.setRate(s)),
+    final controller = widget.controller;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          itemCount: _speeds.length,
+          itemBuilder: (context, i) {
+            final s = _speeds[i];
+            final selected = controller.value.playbackSpeed == s;
+            return _TVOptionRow(
+              autofocus: selected,
+              icon: Icons.speed_rounded,
+              label: s == 1.0 ? 'Normal' : '${s}x',
+              selected: selected,
+              onSelect: () => controller.setPlaybackSpeed(s),
+            );
+          },
         );
       },
-    );
-  }
-}
-
-class _QualityList extends StatefulWidget {
-  const _QualityList({required this.player});
-  final Player player;
-
-  @override
-  State<_QualityList> createState() => _QualityListState();
-}
-
-class _QualityListState extends State<_QualityList> {
-  @override
-  Widget build(BuildContext context) {
-    final player = widget.player;
-    final tracks = player.state.tracks;
-    final currentTrack = player.state.track;
-    final videoTracks = tracks.video
-        .where((t) => t.id != 'auto' && t.id != 'no')
-        .toList();
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: [
-        _TVOptionRow(
-          autofocus: currentTrack.video.id == 'auto',
-          icon: Icons.auto_awesome_rounded,
-          label: 'Auto',
-          selected: currentTrack.video.id == 'auto',
-          onSelect: () =>
-              setState(() => player.setVideoTrack(VideoTrack.auto())),
-        ),
-        ...videoTracks.map((t) {
-          final label = t.h != null && t.w != null
-              ? '${t.h}p${t.codec != null ? " • ${t.codec}" : ""}'
-              : (t.title ?? t.id);
-          return _TVOptionRow(
-            icon: Icons.hd_rounded,
-            label: label,
-            selected: currentTrack.video.id == t.id,
-            onSelect: () => setState(() => player.setVideoTrack(t)),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _SubtitleAudioList extends StatefulWidget {
-  const _SubtitleAudioList({required this.player});
-  final Player player;
-
-  @override
-  State<_SubtitleAudioList> createState() => _SubtitleAudioListState();
-}
-
-class _SubtitleAudioListState extends State<_SubtitleAudioList> {
-  @override
-  Widget build(BuildContext context) {
-    final player = widget.player;
-    final tracks = player.state.tracks;
-    final currentTrack = player.state.track;
-    final subtitleTracks = tracks.subtitle.where((t) => t.id != 'no').toList();
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: [
-        const _SectionLabel('Subtitles'),
-        _TVOptionRow(
-          autofocus: currentTrack.subtitle.id == 'no',
-          icon: Icons.subtitles_off_rounded,
-          label: 'Off',
-          selected: currentTrack.subtitle.id == 'no',
-          onSelect: () =>
-              setState(() => player.setSubtitleTrack(SubtitleTrack.no())),
-        ),
-        ...subtitleTracks.map((t) {
-          final label = t.title ?? t.language ?? t.id;
-          return _TVOptionRow(
-            icon: Icons.subtitles_rounded,
-            label: label,
-            selected: currentTrack.subtitle.id == t.id,
-            onSelect: () => setState(() => player.setSubtitleTrack(t)),
-          );
-        }),
-        if (tracks.audio.length > 1) ...[
-          const _SectionLabel('Audio'),
-          ...tracks.audio.map((t) {
-            final label = t.title ?? t.language ?? t.id;
-            return _TVOptionRow(
-              icon: Icons.graphic_eq_rounded,
-              label: label,
-              selected: currentTrack.audio.id == t.id,
-              onSelect: () => setState(() => player.setAudioTrack(t)),
-            );
-          }),
-        ],
-      ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          color: _kAccent.withOpacity(0.85),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.4,
-        ),
-      ),
     );
   }
 }

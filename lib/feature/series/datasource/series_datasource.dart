@@ -1,6 +1,7 @@
 import 'dart:convert' show jsonDecode;
 
 import 'package:http/http.dart' as http;
+import 'package:playon/core/models/response/match_detail_model.dart';
 import 'package:playon/core/models/response/series_detail_model.dart';
 import 'package:playon/core/models/response/series_model.dart';
 import 'package:playon/core/service/storage_service.dart';
@@ -64,6 +65,36 @@ class SeriesDatasource {
       }
     } catch (e, stackTrace) {
       print('Series Detail Exception: $e');
+      print(stackTrace);
+      return null;
+    }
+  }
+
+  Future<MatchDetailResponse?> matchDetail({required String id}) async {
+    try {
+      final url = Uri.parse(AppUrl.matchDetail(id: id));
+      final token = await StorageService.getToken();
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+
+        return MatchDetailResponse.fromJson(json);
+      } else {
+        print('Match Detail Error: ${response.statusCode}');
+        print(response.body);
+        return null;
+      }
+    } catch (e, stackTrace) {
+      print('Match Detail Exception: $e');
       print(stackTrace);
       return null;
     }

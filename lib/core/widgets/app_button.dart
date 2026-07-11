@@ -34,6 +34,7 @@ class AppButton extends StatefulWidget {
   final double height;
   final double radius;
   final TextStyle? textStyle;
+  final double fonSize;
 
   const AppButton({
     super.key,
@@ -44,6 +45,7 @@ class AppButton extends StatefulWidget {
     this.height = 45,
     this.radius = 30,
     this.textStyle,
+    this.fonSize = 15,
   });
 
   @override
@@ -74,8 +76,8 @@ class _AppButtonState extends State<AppButton> {
           borderRadius: BorderRadius.circular(widget.radius),
           onTap: widget.isLoading ? null : widget.onTap,
           child: Container(
-            height: widget.height,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            
+            padding:EdgeInsets.all(4),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: widget.isLoading
@@ -93,9 +95,10 @@ class _AppButtonState extends State<AppButton> {
                     ),
                   )
                 : Text(
+                  
                     widget.title,
                     style:
-                        widget.textStyle ?? text15(fontWeight: FontWeight.w600),
+                        widget.textStyle ?? text10( fontWeight: FontWeight.w600),
                   ),
           ),
         ),

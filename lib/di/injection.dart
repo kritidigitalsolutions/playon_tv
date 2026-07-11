@@ -20,9 +20,11 @@ import 'package:playon/feature/live_tv/datasource/live_tv_datasource.dart';
 import 'package:playon/feature/live_tv/usecase/all_channel_usecase.dart';
 import 'package:playon/feature/live_tv/usecase/channel_catagory_usecase.dart';
 import 'package:playon/feature/live_tv/usecase/watch_live_usecase.dart';
+import 'package:playon/feature/series/bloc/match/match_bloc.dart';
 import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/feature/series/datasource/series_datasource.dart';
 import 'package:playon/feature/series/usecase/all_series_usecase.dart';
+import 'package:playon/feature/series/usecase/match_detail_usecase.dart';
 import 'package:playon/feature/series/usecase/series_detail_usecase.dart';
 
 part 'injection_auth.dart';

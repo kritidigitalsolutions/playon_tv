@@ -1,13 +1,12 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:chewie/chewie.dart';
+import 'package:video_player/video_player.dart';
 import 'package:playon/core/widgets/video_control_overlay.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
+
 /// True if [url] is a YouTube link in any common form (watch,
 /// youtu.be, or embed) — these need YoutubeExplode to resolve a
-/// direct stream URL first, since media_kit can't play a YouTube
+/// direct stream URL first, since video_player can't play a YouTube
 /// webpage URL directly.
 bool isYoutubeUrl(String url) {
   final lower = url.toLowerCase();
@@ -40,7 +39,10 @@ class MediaPlayerWidget extends StatefulWidget {
   final bool isBack;
   final String? title;
   final void Function(String message)? onError;
-  final void Function(Player player, VideoController controller)?
+  final void Function(
+    VideoPlayerController controller,
+    ChewieController chewieController,
+  )?
   onControllerReady;
 
   @override
@@ -84,8 +86,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
 /// Resolves a YouTube URL into a direct playable stream URL via
 /// YoutubeExplode, then hands that URL to the same native
-/// media_kit player used for every other stream — so YouTube
-/// content gets the identical TV-native controls/overlay.
+/// video_player/chewie player used for every other stream — so
+/// YouTube content gets the identical TV-native controls/overlay.
 class _YoutubeResolvingPlayer extends StatefulWidget {
   const _YoutubeResolvingPlayer({
     required this.url,
@@ -109,7 +111,10 @@ class _YoutubeResolvingPlayer extends StatefulWidget {
   final bool isBack;
   final String? title;
   final void Function(String message)? onError;
-  final void Function(Player player, VideoController controller)?
+  final void Function(
+    VideoPlayerController controller,
+    ChewieController chewieController,
+  )?
   onControllerReady;
 
   @override
@@ -153,7 +158,7 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
 
       final manifest = await _yt.videos.streamsClient.getManifest(videoId);
 
-      // Prefer a muxed (video+audio combined) stream so media_kit
+      // Prefer a muxed (video+audio combined) stream so video_player
       // gets a single playable URL, same as any other stream.
       final streamInfo = manifest.muxed.isNotEmpty
           ? manifest.muxed.withHighestBitrate()
@@ -211,8 +216,11 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
   }
 }
 
-/// Your original media_kit-based player, with an Android-TV-specific
-/// rendering fix applied (see [_buildVideoControllerConfiguration]).
+/// video_player + chewie player. chewie's `customControls` slot is
+/// handed the same TV-styled VideoControlsOverlay you had before, so
+/// Chewie manages the playback surface/lifecycle while your D-pad UI
+/// stays exactly as designed. See video_control_overlay.dart for how
+/// it reads the VideoPlayerController via ChewieController.of(context).
 class _NativeMediaPlayer extends StatefulWidget {
   const _NativeMediaPlayer({
     super.key,
@@ -237,7 +245,10 @@ class _NativeMediaPlayer extends StatefulWidget {
   final bool isBack;
   final String? title;
   final void Function(String message)? onError;
-  final void Function(Player player, VideoController controller)?
+  final void Function(
+    VideoPlayerController controller,
+    ChewieController chewieController,
+  )?
   onControllerReady;
 
   @override
@@ -245,135 +256,126 @@ class _NativeMediaPlayer extends StatefulWidget {
 }
 
 class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
-  late final Player _player;
-  late final VideoController _controller;
+  VideoPlayerController? _controller;
+  ChewieController? _chewieController;
   bool _isLoading = true;
   String? _errorMessage;
   int _retryCount = 0;
   final int _maxRetries = 3;
 
-  // Some Android TV boxes (common on Amlogic/Rockchip chipsets) fail
-  // to composite mpv's hardware-decoded video texture to the screen:
-  // audio plays fine but the picture stays black. Forcing software
-  // rendering on Android sidesteps that broken GPU compositing path.
-  // Desktop keeps hardware acceleration since it already renders fine.
-  VideoControllerConfiguration _videoControllerConfiguration() {
-    if (Platform.isAndroid) {
-      return const VideoControllerConfiguration(
-        enableHardwareAcceleration: false,
-      );
-    }
-    return const VideoControllerConfiguration();
-  }
-
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    _initStream();
   }
 
-  void _initializePlayer() {
-    try {
-      _player = Player();
-      _controller = VideoController(
-        _player,
-        configuration: _videoControllerConfiguration(),
+  String _userMessageFor(String raw) {
+    final errorMsg = raw.toLowerCase();
+    if (errorMsg.contains('unsupported') ||
+        errorMsg.contains('codec') ||
+        errorMsg.contains('format')) {
+      return 'Video format not supported on this TV device';
+    } else if (errorMsg.contains('network') ||
+        errorMsg.contains('connection') ||
+        errorMsg.contains('timeout')) {
+      return 'Network error - please check your connection';
+    } else if (errorMsg.contains('decoder') || errorMsg.contains('decode')) {
+      return 'Video decoding error - try a different stream';
+    } else if (errorMsg.contains('404') || errorMsg.contains('not found')) {
+      return 'Stream not found - please try again later';
+    }
+    return raw;
+  }
+
+  void _onControllerUpdate() {
+    final controller = _controller;
+    if (controller == null || !mounted) return;
+    if (controller.value.hasError && _errorMessage == null) {
+      final msg = _userMessageFor(
+        controller.value.errorDescription ?? 'Playback error',
       );
-      _initStream();
-      widget.onControllerReady?.call(_player, _controller);
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to initialize player: $e';
-        _isLoading = false;
-      });
-      widget.onError?.call(_errorMessage!);
+      setState(() => _errorMessage = msg);
+      widget.onError?.call(msg);
+
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) _initStream();
+        });
+      }
     }
   }
 
   Future<void> _initStream() async {
-    try {
-      setState(() => _isLoading = true);
+    _disposeControllers();
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
-      final media = Media(
-        widget.url,
+    try {
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
         httpHeaders: {
           'User-Agent': 'PlayOnTV/1.0',
           'Accept-Encoding': 'identity',
         },
       );
 
-      await _player.open(media, play: widget.autoPlay);
+      await controller.initialize();
+      await controller.setLooping(widget.looping);
+      controller.addListener(_onControllerUpdate);
 
-      await _player.setPlaylistMode(
-        widget.looping ? PlaylistMode.single : PlaylistMode.none,
+      if (widget.autoPlay) {
+        await controller.play();
+      }
+
+      final chewieController = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: widget.autoPlay,
+        looping: widget.looping,
+        showControls: widget.showControls,
+        allowFullScreen: false, // fullscreen is handled by the parent
+        customControls: widget.showControls
+            ? VideoControlsOverlay(
+                isFullscreen: widget.isFullscreen,
+                onFullscreenChanged: widget.onFullscreenChanged,
+                title: widget.isBack ? widget.title : null,
+              )
+            : const SizedBox.shrink(),
       );
 
-      _player.stream.error.listen((err) {
-        final errorMsg = err.toString().toLowerCase();
-        String userMessage = err.toString();
-
-        if (errorMsg.contains('unsupported') ||
-            errorMsg.contains('codec') ||
-            errorMsg.contains('format')) {
-          userMessage = 'Video format not supported on this TV device';
-        } else if (errorMsg.contains('network') ||
-            errorMsg.contains('connection') ||
-            errorMsg.contains('timeout')) {
-          userMessage = 'Network error - please check your connection';
-        } else if (errorMsg.contains('decoder') ||
-            errorMsg.contains('decode')) {
-          userMessage = 'Video decoding error - try a different stream';
-        } else if (errorMsg.contains('404') || errorMsg.contains('not found')) {
-          userMessage = 'Stream not found - please try again later';
-        }
-
-        setState(() {
-          _errorMessage = userMessage;
-          _isLoading = false;
-        });
-        widget.onError?.call(userMessage);
-
-        if (_retryCount < _maxRetries) {
-          _retryCount++;
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) _initStream();
-          });
-        }
-      });
-
-      _player.stream.buffering.listen((buffering) {
-        if (mounted) setState(() => _isLoading = buffering);
-      });
-
-      _player.stream.completed.listen((_) {
-        if (widget.looping) {
-          _player.seek(Duration.zero);
-          _player.play();
-        }
-      });
-
-      _player.stream.playing.listen((isPlaying) {
-        if (isPlaying && mounted) setState(() => _isLoading = false);
-      });
-
-      try {
-        final duration = await _player.stream.duration.first;
-        if (duration == Duration.zero) {
-          debugPrint('Live stream detected');
-        }
-      } catch (_) {
-        debugPrint('Stream duration not available');
+      if (!mounted) {
+        controller.removeListener(_onControllerUpdate);
+        chewieController.dispose();
+        controller.dispose();
+        return;
       }
 
-      if (mounted) setState(() => _isLoading = false);
+      setState(() {
+        _controller = controller;
+        _chewieController = chewieController;
+        _isLoading = false;
+      });
+
+      widget.onControllerReady?.call(controller, chewieController);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
+      if (!mounted) return;
+      final msg = _userMessageFor(e.toString());
+      setState(() {
+        _errorMessage = msg;
+        _isLoading = false;
+      });
+      widget.onError?.call(msg);
+
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) _initStream();
         });
       }
-      widget.onError?.call(e.toString());
     }
   }
 
@@ -386,9 +388,17 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
     }
   }
 
+  void _disposeControllers() {
+    _controller?.removeListener(_onControllerUpdate);
+    _chewieController?.dispose();
+    _controller?.dispose();
+    _controller = null;
+    _chewieController = null;
+  }
+
   @override
   void dispose() {
-    _player.dispose();
+    _disposeControllers();
     super.dispose();
   }
 
@@ -407,29 +417,31 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
       );
     }
 
+    if (_isLoading || _chewieController == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+          strokeWidth: 3,
+        ),
+      );
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        Positioned.fill(
-          child: Video(
-            controller: _controller,
-            controls: widget.showControls
-                ? (state) => VideoControlsOverlay(
-                    isFullscreen: widget.isFullscreen,
-                    onFullscreenChanged: widget.onFullscreenChanged,
-                    state: state,
-                    title: widget.isBack ? widget.title : null,
-                  )
-                : NoVideoControls,
-          ),
+        Positioned.fill(child: Chewie(controller: _chewieController!)),
+        AnimatedBuilder(
+          animation: _controller!,
+          builder: (context, _) {
+            if (!_controller!.value.isBuffering) return const SizedBox();
+            return const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 3,
+              ),
+            );
+          },
         ),
-        if (_isLoading)
-          const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 3,
-            ),
-          ),
       ],
     );
   }
