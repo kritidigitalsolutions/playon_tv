@@ -5,9 +5,11 @@ import 'package:playon/feature/highlights/presentation/pages/highlight_tornament
 import 'package:playon/feature/highlights/presentation/pages/highlights.dart';
 import 'package:playon/feature/home/presentation/page/home_page.dart';
 import 'package:playon/feature/home/presentation/page/match_video_page.dart';
+import 'package:playon/feature/home/presentation/page/star_player_video_page.dart';
 import 'package:playon/feature/live_tv/presentation/pages/live_channel_datail_page.dart';
 import 'package:playon/feature/live_tv/presentation/pages/live_tv.dart';
 import 'package:playon/feature/podcast/presentation/pages/podcast_page.dart';
+import 'package:playon/feature/search/presentation/pages/search_page.dart';
 import 'package:playon/feature/series/presentation/pages/series.dart';
 import 'package:playon/feature/series/presentation/pages/series_detail_page.dart';
 import 'package:playon/feature/series/presentation/pages/series_match_page.dart';
@@ -30,6 +32,10 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const NotificationPage(),
     ),
     GoRoute(path: '/series', builder: (context, state) => const Series()),
+    GoRoute(
+      path: '/searchPage',
+      builder: (context, state) => const SearchPage(),
+    ),
     GoRoute(
       path: '/highlights',
       builder: (context, state) => const Highlights(),
@@ -73,7 +79,7 @@ final GoRouter router = GoRouter(
       path: '/allHighlightsTornament/:id',
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
-        final title = state.extra as String? ?? '';
+        final title = state.uri.queryParameters['title'] ?? '';
         return HighlightTornamentPage(id: id, title: title);
       },
     ),
@@ -89,6 +95,13 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
         return MatchVideoPage(id: id);
+      },
+    ),
+    GoRoute(
+      path: '/starPlayerVideo/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'] ?? '';
+        return StarPlayerVideoPageTv(id: id); // ✅ correct page
       },
     ),
   ],

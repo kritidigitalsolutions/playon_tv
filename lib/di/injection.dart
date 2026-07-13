@@ -15,6 +15,7 @@ import 'package:playon/feature/home/bloc/star_player/star_payer_cubit.dart';
 import 'package:playon/feature/home/datasource/home_datasource.dart';
 import 'package:playon/feature/home/usecase/all_star_player_usecase.dart';
 import 'package:playon/feature/home/usecase/banner_ads_usecase.dart';
+import 'package:playon/feature/home/usecase/star_player_detail_usecase.dart';
 import 'package:playon/feature/live_tv/bloc/channel_catagory/channel_catagory_bloc.dart';
 import 'package:playon/feature/live_tv/bloc/channels/channels_bloc.dart';
 import 'package:playon/feature/live_tv/bloc/watch_live/watch_live_bloc.dart';

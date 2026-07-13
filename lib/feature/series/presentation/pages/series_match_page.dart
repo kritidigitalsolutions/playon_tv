@@ -15,9 +15,7 @@ import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
 
-// Fallback used only if a match genuinely has no streamUrl yet
-const String _placeholderStreamUrl =
-    'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+
 
 class SeriesMatchPage extends StatefulWidget {
   const SeriesMatchPage({super.key, required this.id});
@@ -181,9 +179,8 @@ class _MatchContent extends StatelessWidget {
         : '${match.teamA} vs ${match.teamB}';
 
     // Use the actual stream URL from the API, fallback to placeholder
-    final streamUrl = match.stream.streamUrl.isNotEmpty
-        ? match.stream.streamUrl
-        : _placeholderStreamUrl;
+    final streamUrl = 
+         match.stream.streamUrl;
 
     final player = MediaPlayerWidget(
       url: streamUrl,

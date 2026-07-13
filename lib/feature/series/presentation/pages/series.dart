@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/models/response/series_model.dart';
 import 'package:playon/core/service/enum.dart';
+import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/feature/series/bloc/series/series_bloc.dart';
@@ -46,7 +47,8 @@ class _SeriesState extends State<Series> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final nearBottom = _scrollController.position.pixels >=
+    final nearBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200;
     if (nearBottom) {
       context.read<SeriesBloc>().add(const SeriesEvent.getMoreSeriesList());
@@ -59,9 +61,7 @@ class _SeriesState extends State<Series> {
   List<SeriesModel> _filter(List<SeriesModel> series) {
     if (selectedFilter == 'HOME') return series;
     return series
-        .where(
-          (item) => (item.sport ).toUpperCase() == selectedFilter,
-        )
+        .where((item) => (item.sport).toUpperCase() == selectedFilter)
         .toList();
   }
 
@@ -109,13 +109,21 @@ class _SeriesState extends State<Series> {
                         children: [
                           Text("Something went wrong", style: text16()),
                           const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () {
-                              context
-                                  .read<SeriesBloc>()
-                                  .add(const SeriesEvent.getSeriesList());
+                          TvFocusable(
+                            autofocus: true,
+                            borderRadius: BorderRadius.circular(8),
+                            onSelect: () {
+                              context.read<SeriesBloc>().add(
+                                const SeriesEvent.getSeriesList(),
+                              );
                             },
-                            child: const Text("Retry"),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Text("Retry", style: text16()),
+                            ),
                           ),
                         ],
                       ),
@@ -135,48 +143,54 @@ class _SeriesState extends State<Series> {
 
                   return RefreshIndicator(
                     onRefresh: () async {
-                      context
-                          .read<SeriesBloc>()
-                          .add(const SeriesEvent.getSeriesList());
+                      context.read<SeriesBloc>().add(
+                        const SeriesEvent.getSeriesList(),
+                      );
                     },
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(4),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4, // Number of cards per row
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: filteredSeries.length + (isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= filteredSeries.length) {
-                          // Trailing pagination spinner.
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              ),
+                    child: FocusTraversalGroup(
+                      policy: ReadingOrderTraversalPolicy(),
+                      child: GridView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(4),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 4, // Number of cards per row
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 1,
                             ),
-                          );
-                        }
-
-                        final item = filteredSeries[index];
-                        return SeriesCard(
-                          series: item,
-                          onTap: () {
-                            AppNavigation.push(
-                              context,
-                              "/seriesDetail/${item.id }",
+                        itemCount:
+                            filteredSeries.length + (isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index >= filteredSeries.length) {
+                            // Trailing pagination spinner.
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
                             );
-                          },
-                        );
-                      },
+                          }
+
+                          final item = filteredSeries[index];
+                          return SeriesCard(
+                            series: item,
+                            autofocus: index == 0,
+                            onTap: () {
+                              AppNavigation.push(
+                                context,
+                                "/seriesDetail/${item.id}",
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   );
                 },
@@ -192,8 +206,14 @@ class _SeriesState extends State<Series> {
 class SeriesCard extends StatefulWidget {
   final SeriesModel series;
   final VoidCallback? onTap;
+  final bool autofocus;
 
-  const SeriesCard({super.key, required this.series, this.onTap});
+  const SeriesCard({
+    super.key,
+    required this.series,
+    this.onTap,
+    this.autofocus = false,
+  });
 
   @override
   State<SeriesCard> createState() => _SeriesCardState();
@@ -206,13 +226,17 @@ class _SeriesCardState extends State<SeriesCard> {
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(() {
-      setState(() => _isFocused = _focusNode.hasFocus);
-    });
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!mounted) return;
+    setState(() => _isFocused = _focusNode.hasFocus);
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
@@ -221,142 +245,135 @@ class _SeriesCardState extends State<SeriesCard> {
   Widget build(BuildContext context) {
     final series = widget.series;
 
-    return Focus(
+    return TvFocusable(
       focusNode: _focusNode,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _isFocused ? 1.05 : 1.0,
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: AppColors.background.withAlpha(60),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: _isFocused
-                    ? AppColors.primary
-                    : AppColors.primary.withOpacity(0.3),
-                width: _isFocused ? 3 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _isFocused
-                      ? AppColors.primary.withOpacity(0.5)
-                      : Colors.black.withOpacity(0.3),
-                  blurRadius: _isFocused ? 22 : 8,
-                  spreadRadius: _isFocused ? 2 : 0,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+      autofocus: widget.autofocus,
+      onSelect: widget.onTap ?? () {},
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.background.withAlpha(60),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _isFocused
+                ? AppColors.primary
+                : AppColors.primary.withOpacity(0.3),
+            width: _isFocused ? 3 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isFocused
+                  ? AppColors.primary.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.3),
+              blurRadius: _isFocused ? 22 : 8,
+              spreadRadius: _isFocused ? 2 : 0,
+              offset: const Offset(0, 5),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image - flexes to fill whatever space is left over
-                  // after the content section below takes what it needs.
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.network(
-                          series.banner ,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return Container(
-                              color: Colors.grey[850],
-                              alignment: Alignment.center,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[850],
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.image_not_supported,
-                                size: 36,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
-                        ),
-                        // subtle bottom scrim so the image edge blends
-                        // into the content section below
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 40,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.35),
-                                ],
-                              ),
-                            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image - flexes to fill whatever space is left over
+              // after the content section below takes what it needs.
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      series.banner,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: Colors.grey[850],
+                          alignment: Alignment.center,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[850],
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    ),
+                    // subtle bottom scrim so the image edge blends
+                    // into the content section below
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 40,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.35),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  // Content section — NOT wrapped in Expanded. It only
-                  // takes the height its text actually needs.
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Text(
-                          series.title ,
-                          style: text16(fontWeight: FontWeight.w600),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        // Sport and Country as pill chips
-                        Row(
-                          children: [
-                            if ((series.sport ).isNotEmpty)
-                              _Chip(text: series.sport.toUpperCase()),
-                            if ((series.tourCountry ?? '').isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              _Chip(text: series.tourCountry!),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        // Description
-                        Text(
-                          series.description ,
-                          style: text12(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              // Content section — NOT wrapped in Expanded. It only
+              // takes the height its text actually needs.
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Text(
+                      series.title,
+                      style: text16(fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Sport and Country as pill chips
+                    Row(
+                      children: [
+                        if ((series.sport).isNotEmpty)
+                          _Chip(text: series.sport.toUpperCase()),
+                        if ((series.tourCountry ?? '').isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          _Chip(text: series.tourCountry!),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    Text(
+                      series.description,
+                      style: text12(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -69,7 +69,21 @@ class HighlightCard extends StatelessWidget {
                         width: 1,
                       ),
                     ),
-                    child: Image.asset(logo, width: 24, height: 24),
+                    child: Image.network(
+                      image,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        debugPrint("Image Error: $error");
+                        debugPrint("Image URL: $image");
+                        return const Center(
+                          child: Icon(Icons.broken_image, color: Colors.white),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

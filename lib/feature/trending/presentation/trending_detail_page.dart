@@ -3,7 +3,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/models/response/series_detail_model.dart';
 import 'package:playon/core/service/enum.dart';
@@ -34,10 +33,6 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
 
   int selectedIndex = 0;
 
-  // One focus node per tab's content root, so we can programmatically
-  // hand focus to the newly-selected tab. IndexedStack keeps every tab
-  // mounted, so autofocus alone only ever fires once — this is what
-  // actually moves the remote's focus when tabs change.
   final List<FocusNode> _tabRootNodes = List.generate(
     5,
     (_) => FocusNode(skipTraversal: true),
@@ -76,7 +71,6 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
         final status = state.seriesDetailStatus;
         final detail = state.seriesDetail;
 
-        // Initial / refetch loading with nothing to show yet
         if (status == Status.loading && detail == null) {
           return Scaffold(
             backgroundColor: AppColors.black,
@@ -86,7 +80,6 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
           );
         }
 
-        // Error with nothing cached to fall back on
         if (status == Status.error && detail == null) {
           return Scaffold(
             backgroundColor: AppColors.black,
@@ -108,7 +101,10 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
                         horizontal: 20,
                         vertical: 10,
                       ),
-                      child: Text("Retry", style: text17(color: AppColors.white)),
+                      child: Text(
+                        "Retry",
+                        style: text17(color: AppColors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -135,7 +131,6 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Fixed back arrow — stays at top, never scrolls
                   Row(
                     children: [
                       Padding(
@@ -149,8 +144,6 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
                       ),
                     ],
                   ),
-
-                  // Everything else scrolls
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
@@ -223,10 +216,7 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      Text(
-                                        series.title,
-                                        style: text18(),
-                                      ),
+                                      Text(series.title, style: text18()),
                                       const SizedBox(height: 4),
                                       Text(
                                         "${_formatDate(series.startDate)} - ${_formatDate(series.endDate)}",
@@ -268,19 +258,28 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
                                     focusNode: _tabRootNodes[0],
                                     canRequestFocus: false,
                                     skipTraversal: true,
-                                    child: _HomeTab(matches: matches),
+                                    child: _HomeTab(
+                                      matches: matches,
+                                      seriesId: widget.id,
+                                    ),
                                   ),
                                   Focus(
                                     focusNode: _tabRootNodes[1],
                                     canRequestFocus: false,
                                     skipTraversal: true,
-                                    child: _UpcomingTab(matches: matches),
+                                    child: _UpcomingTab(
+                                      matches: matches,
+                                      seriesId: widget.id,
+                                    ),
                                   ),
                                   Focus(
                                     focusNode: _tabRootNodes[2],
                                     canRequestFocus: false,
                                     skipTraversal: true,
-                                    child: _HighlightsTab(matches: matches),
+                                    child: _HighlightsTab(
+                                      matches: matches,
+                                      seriesId: widget.id,
+                                    ),
                                   ),
                                   Focus(
                                     focusNode: _tabRootNodes[3],
@@ -354,8 +353,18 @@ class _NetworkOrAsset extends StatelessWidget {
 }
 
 const _kMonths = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _formatDate(String iso) {
@@ -388,12 +397,99 @@ bool _isUpcoming(String status) {
 }
 
 // ---------------------------------------------------------------------------
+// Shared focus-glow shell
+// ---------------------------------------------------------------------------
+class _FocusCard extends StatefulWidget {
+  const _FocusCard({
+    required this.child,
+    required this.onSelect,
+    this.autofocus = false,
+    this.borderRadius = 20,
+  });
+
+  final Widget child;
+  final VoidCallback onSelect;
+  final bool autofocus;
+  final double borderRadius;
+
+  @override
+  State<_FocusCard> createState() => _FocusCardState();
+}
+
+class _FocusCardState extends State<_FocusCard> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (mounted) setState(() => _isFocused = _focusNode.hasFocus);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(widget.borderRadius);
+    return TvFocusable(
+      focusNode: _focusNode,
+      autofocus: widget.autofocus,
+      borderRadius: radius,
+      focusBackgroundColor: Colors.transparent,
+      onSelect: widget.onSelect,
+      child: AnimatedScale(
+        scale: _isFocused ? 1.05 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: _isFocused
+                  ? AppColors.primary
+                  : AppColors.primary.withOpacity(0.15),
+              width: _isFocused ? 3 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _isFocused
+                    ? AppColors.primary.withOpacity(0.45)
+                    : Colors.black.withOpacity(0.25),
+                blurRadius: _isFocused ? 24 : 8,
+                spreadRadius: _isFocused ? 1 : 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(borderRadius: radius, child: widget.child),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
 
+const kAccent = Color(0xFF2FE6C4);
+const kGold = Color(0xFFF3B94D);
+
 class _HomeTab extends StatelessWidget {
-  const _HomeTab({required this.matches});
+  const _HomeTab({required this.matches, required this.seriesId});
   final List<MatchModel> matches;
+  final String seriesId;
 
   @override
   Widget build(BuildContext context) {
@@ -427,34 +523,63 @@ class _HomeTab extends StatelessWidget {
                   final item = recents[index];
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: TvFocusable(
+                    child: _FocusCard(
+                      autofocus: index == 0,
                       onSelect: () {
-                        // navigate to result detail
+                        // FIX: Use the correct navigation path
+                        AppNavigation.push(context, "seriesMatch/${item.id}");
                       },
                       child: AnimatedBox(
                         width: double.infinity,
                         padding: const EdgeInsets.all(8),
                         borderRadius: BorderRadius.circular(20),
                         color: AppColors.background.withAlpha(60),
-                        border: Border.all(color: AppColors.background),
                         child: Row(
                           children: [
-                            AnimatedBox(
-                              height: 100,
-                              width: 150,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: AppColors.white),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: _NetworkOrAsset(
-                                  url: item.thumbnail.isNotEmpty
-                                      ? item.thumbnail
-                                      : item.banner,
-                                  fallbackAsset: AppImage.background,
+                            Stack(
+                              children: [
+                                AnimatedBox(
+                                  height: 100,
+                                  width: 150,
+                                  borderRadius: BorderRadius.circular(15),
+                                  border: Border.all(color: AppColors.white),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(15),
+                                    child: _NetworkOrAsset(
+                                      url: item.thumbnail.isNotEmpty
+                                          ? item.thumbnail
+                                          : item.banner,
+                                      fallbackAsset: AppImage.background,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if (item.isPremium)
+                                  Positioned(
+                                    top: 6,
+                                    left: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: kGold.withOpacity(0.9),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'PREMIUM',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            SizedBox(width: 10),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,8 +623,9 @@ class _HomeTab extends StatelessWidget {
 }
 
 class _UpcomingTab extends StatelessWidget {
-  const _UpcomingTab({required this.matches});
+  const _UpcomingTab({required this.matches, required this.seriesId});
   final List<MatchModel> matches;
+  final String seriesId;
 
   @override
   Widget build(BuildContext context) {
@@ -528,16 +654,17 @@ class _UpcomingTab extends StatelessWidget {
           final item = upcoming[index];
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: TvFocusable(
+            child: _FocusCard(
+              autofocus: index == 0,
               onSelect: () {
-                // navigate to match detail
+                // FIX: Use the correct navigation path
+                AppNavigation.push(context, "seriesMatch/${item.id}");
               },
               child: AnimatedBox(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 borderRadius: BorderRadius.circular(20),
                 color: AppColors.background.withAlpha(60),
-                border: Border.all(color: AppColors.background),
                 child: Row(
                   children: [
                     ClipOval(
@@ -573,9 +700,7 @@ class _UpcomingTab extends StatelessWidget {
                             ),
                           Text(
                             _formatDateTime(item.matchDate),
-                            style: text17(
-                              color: AppColors.white.withAlpha(80),
-                            ),
+                            style: text17(color: AppColors.white.withAlpha(80)),
                           ),
                         ],
                       ),
@@ -603,15 +728,24 @@ class _UpcomingTab extends StatelessWidget {
 }
 
 class _HighlightsTab extends StatelessWidget {
-  const _HighlightsTab({required this.matches});
+  const _HighlightsTab({required this.matches, required this.seriesId});
   final List<MatchModel> matches;
+  final String seriesId;
 
   @override
   Widget build(BuildContext context) {
-    // Prefer explicitly featured/trending matches; fall back to all matches
-    // if the series has none flagged.
-    var highlights =
-        matches.where((m) => m.isFeatured || m.isTrending).toList();
+    // Filter matches that have actual highlights
+    // You can adjust this logic based on your data model
+    var highlights = matches
+        .where(
+          (m) =>
+              m.isFeatured ||
+              m.isTrending ||
+              (m.thumbnail.isNotEmpty && m.status.toLowerCase() == 'completed'),
+        )
+        .toList();
+
+    // If no featured/trending highlights, show all matches as highlights
     if (highlights.isEmpty) highlights = matches;
 
     if (highlights.isEmpty) {
@@ -628,126 +762,239 @@ class _HighlightsTab extends StatelessWidget {
 
     return FocusTraversalGroup(
       policy: ReadingOrderTraversalPolicy(),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: highlights.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: 0.9,
-        ),
-        itemBuilder: (context, index) {
-          final item = highlights[index];
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: highlights.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
+          ),
+          itemBuilder: (context, index) {
+            final item = highlights[index];
 
-          return TvFocusable(
-            onSelect: () {
-              AppNavigation.push(context, "highlightMatch/${item.id}");
-            },
-            child: AnimatedBox(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              color: AppColors.background.withAlpha(40),
-              border: Border.all(color: AppColors.background),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          _NetworkOrAsset(
-                            url: item.thumbnail.isNotEmpty
-                                ? item.thumbnail
-                                : item.banner,
-                            fallbackAsset: AppImage.background,
-                          ),
-                          Container(color: Colors.black.withOpacity(0.25)),
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
+            // Check if this is a "real" highlight (has thumbnail and is completed)
+            final isRealHighlight =
+                item.thumbnail.isNotEmpty &&
+                item.status.toLowerCase() == 'completed';
+
+            return _FocusCard(
+              autofocus: index == 0,
+              borderRadius: 14,
+              onSelect: () {
+                // Navigate to match page
+                AppNavigation.push(context, "seriesMatch/${item.id}");
+              },
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.background.withAlpha(40),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Thumbnail with play button overlay
+                    Expanded(
+                      flex: 4,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(14),
+                          topRight: Radius.circular(14),
+                        ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Thumbnail image
+                            _NetworkOrAsset(
+                              url: item.thumbnail.isNotEmpty
+                                  ? item.thumbnail
+                                  : item.banner,
+                              fallbackAsset: AppImage.background,
+                            ),
+
+                            // Gradient overlay
+                            Container(
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primary.withOpacity(0.9),
-                              ),
-                              child: Icon(
-                                Icons.play_arrow_rounded,
-                                color: AppColors.white,
-                                size: 28,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const [0.4, 1.0],
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.5),
+                                  ],
+                                ),
                               ),
                             ),
+
+                            // Premium badge if applicable
+                            if (item.isPremium)
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFF3B94D,
+                                    ).withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'PREMIUM',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Status badge
+                            if (item.status.isNotEmpty && !isRealHighlight)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    item.status.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Play button - only show for actual highlights
+                            if (isRealHighlight)
+                              const Center(
+                                child: Icon(
+                                  Icons.play_circle_filled,
+                                  color: Colors.white,
+                                  size: 48,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Match info
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Teams
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.teamA,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'VS',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  item.teamB,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          // Match title or sport
+                          Text(
+                            item.title.isNotEmpty ? item.title : item.sport,
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(150),
+                              fontSize: 11,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          const SizedBox(height: 2),
+
+                          // Match date
+                          Text(
+                            _formatDate(item.matchDate),
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(80),
+                              fontSize: 10,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item.teamA,
-                          style: text17(color: AppColors.white),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            "VS",
-                            style: text17(color: AppColors.white),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.teamB,
-                          style: text17(color: AppColors.white),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.title.isNotEmpty ? item.title : item.sport,
-                          style: text17(
-                            color: AppColors.white.withAlpha(150),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          _formatDate(item.matchDate),
-                          style: text17(
-                            color: AppColors.white.withAlpha(100),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -803,16 +1050,16 @@ class _TeamsTab extends StatelessWidget {
           ),
           itemBuilder: (context, index) {
             final item = teams[index];
-            return TvFocusable(
+            return _FocusCard(
+              autofocus: index == 0,
               onSelect: () {
-                // navigate to team detail
+                AppNavigation.push(context, "team/${item.id}");
               },
               child: AnimatedBox(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 color: AppColors.background.withAlpha(40),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.background),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,

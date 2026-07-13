@@ -188,8 +188,9 @@ class _SportsViewState extends State<SportsView> {
               }
 
               final sportFiltered = _filterBySport(state.series);
-              final trending =
-                  sportFiltered.where((s) => s.isTrending).toList();
+              final trending = sportFiltered
+                  .where((s) => s.isTrending)
+                  .toList();
 
               if (trending.isEmpty) {
                 return const SizedBox.shrink();
@@ -201,8 +202,7 @@ class _SportsViewState extends State<SportsView> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      widget.sportFilter == null ||
-                              widget.sportFilter == 'HOME'
+                      widget.sportFilter == null || widget.sportFilter == 'HOME'
                           ? "Trending Series"
                           : "${widget.sportFilter} Trending Series",
                       style: text24(),
@@ -242,23 +242,23 @@ class _SportsViewState extends State<SportsView> {
                                             fit: BoxFit.cover,
                                             errorBuilder:
                                                 (context, error, stackTrace) {
-                                              return Image.asset(
-                                                AppImage.tornamentlogo,
-                                                fit: BoxFit.cover,
-                                              );
-                                            },
+                                                  return Image.asset(
+                                                    AppImage.tornamentlogo,
+                                                    fit: BoxFit.cover,
+                                                  );
+                                                },
                                             loadingBuilder:
                                                 (context, child, progress) {
-                                              if (progress == null) {
-                                                return child;
-                                              }
-                                              return const _ShimmerBox(
-                                                width: double.infinity,
-                                                height: double.infinity,
-                                                borderRadius:
-                                                    BorderRadius.zero,
-                                              );
-                                            },
+                                                  if (progress == null) {
+                                                    return child;
+                                                  }
+                                                  return const _ShimmerBox(
+                                                    width: double.infinity,
+                                                    height: double.infinity,
+                                                    borderRadius:
+                                                        BorderRadius.zero,
+                                                  );
+                                                },
                                           )
                                         : Image.asset(
                                             AppImage.tornamentlogo,
@@ -282,8 +282,7 @@ class _SportsViewState extends State<SportsView> {
                                       top: 12,
                                       left: 12,
                                       child: ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(50),
+                                        borderRadius: BorderRadius.circular(50),
                                         child: BackdropFilter(
                                           filter: ImageFilter.blur(
                                             sigmaX: 10,
@@ -301,23 +300,24 @@ class _SportsViewState extends State<SportsView> {
                                                 width: 1,
                                               ),
                                             ),
-                                            child: series
-                                                    .tournamentLogo.isNotEmpty
+                                            child:
+                                                series.tournamentLogo.isNotEmpty
                                                 ? Image.network(
                                                     series.tournamentLogo,
                                                     width: 32,
                                                     height: 32,
-                                                    errorBuilder: (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return Image.asset(
-                                                        AppImage.logo,
-                                                        width: 32,
-                                                        height: 32,
-                                                      );
-                                                    },
+                                                    errorBuilder:
+                                                        (
+                                                          context,
+                                                          error,
+                                                          stackTrace,
+                                                        ) {
+                                                          return Image.asset(
+                                                            AppImage.logo,
+                                                            width: 32,
+                                                            height: 32,
+                                                          );
+                                                        },
                                                   )
                                                 : Image.asset(
                                                     AppImage.logo,
@@ -368,8 +368,9 @@ class _SportsViewState extends State<SportsView> {
               // Skip series that have no matches at all - SeriesModel
               // already carries totalMatches from the all-series API, so
               // this filters without any extra network calls.
-              final withMatches =
-                  sportFiltered.where((s) => s.totalMatches > 0).toList();
+              final withMatches = sportFiltered
+                  .where((s) => s.totalMatches > 0)
+                  .toList();
 
               if (withMatches.isEmpty) {
                 return const SizedBox.shrink();
@@ -386,11 +387,11 @@ class _SportsViewState extends State<SportsView> {
           ),
           const SizedBox(height: 20),
 
-          // Match Highlights (TODO: wire to real API when available)
+          // Match Highlights
           _buildHighlightsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
-          // Star Player Edition (Reels) (TODO: wire to real API when available)
+          // Star Player Edition (Reels) - real API data
           _buildReelsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
@@ -444,9 +445,9 @@ class _SportsViewState extends State<SportsView> {
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () {
-                      context
-                          .read<HighlightBloc>()
-                          .add(HighlightEvent.fetchHighLight());
+                      context.read<HighlightBloc>().add(
+                        HighlightEvent.fetchHighLight(),
+                      );
                     },
                     child: const Text("Retry"),
                   ),
@@ -459,8 +460,8 @@ class _SportsViewState extends State<SportsView> {
         final filtered = (sport == null || sport == 'HOME')
             ? state.highlights
             : state.highlights
-                .where((h) => h.series.sport.toUpperCase() == sport)
-                .toList();
+                  .where((h) => h.series.sport.toUpperCase() == sport)
+                  .toList();
 
         if (filtered.isEmpty) {
           return const SizedBox.shrink();
@@ -491,7 +492,10 @@ class _SportsViewState extends State<SportsView> {
                     return TvFocusable(
                       autofocus: index == 0,
                       onSelect: () {
-                        AppNavigation.push(context, "/highlight/${item.id}");
+                        AppNavigation.push(
+                          context,
+                          "/highlightMatch/${item.id}",
+                        );
                       },
                       child: HighlightCard(
                         image: item.thumbnail,
@@ -517,58 +521,64 @@ class _SportsViewState extends State<SportsView> {
     );
   }
 
-Widget _buildReelsSection(BuildContext context, {String? sport}) {
-  return BlocBuilder<StarPayerCubit, StarPayerState>(
-    builder: (context, state) {
-      // Loading state
-      if (state.allPlayerStatus == Status.loading) {
-        return const SizedBox(
-          height: 260,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-            ),
-          ),
-        );
-      }
-
-      // Get all players
-      final allPlayers = state.starPlayers;
-
-      // Check if we have valid data
-      bool hasValidData =  allPlayers.isNotEmpty;
-
-      // Filter by sport if needed
-      List<StarPlayerModel> filteredPlayers = [];
-      if (hasValidData) {
-        filteredPlayers = allPlayers;
-        if (sport != null && sport != 'HOME') {
-          filteredPlayers = allPlayers.where((player) {
-            return player.sport?.name.toUpperCase() == sport;
-          }).toList();
-        }
-        hasValidData = filteredPlayers.isNotEmpty;
-      }
-
-      // If no valid data or error, use mock data
-      if (!hasValidData || state.allPlayerStatus == Status.error) {
-        final mockReels = _getReels(sport);
-        if (mockReels.isEmpty) {
+  /// Star Player Edition (Reels). Backed entirely by
+  /// `StarPayerCubit.allStarPlayer()` — a single `StarPlayerResponse`
+  /// whose `highlights` list feeds every card. No mock/demo fallback:
+  /// loading shows a spinner, error shows a retry, empty just collapses
+  /// the section.
+  Widget _buildReelsSection(BuildContext context, {String? sport}) {
+    return BlocBuilder<StarPayerCubit, StarPayerState>(
+      builder: (context, state) {
+        // Loading state
+        if (state.allPlayerStatus == Status.loading) {
           return const SizedBox(
             height: 260,
             child: Center(
-              child: Text(
-                "No star players available",
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 14,
-                ),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
+
+        // Error state
+        if (state.allPlayerStatus == Status.error) {
+          return SizedBox(
+            height: 260,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Something went wrong",
+                    style: text17(color: AppColors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      context.read<StarPayerCubit>().allStarPlayer();
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
               ),
             ),
           );
         }
 
-        // Show mock data
+        final allHighlights = state.starPlayers?.highlights ?? [];
+
+        // Filter by the active sport tab, if any.
+        List<StarPlayerModel> filteredHighlights = allHighlights;
+        if (sport != null && sport != 'HOME') {
+          filteredHighlights = allHighlights
+              .where((h) => h.sport?.name.toUpperCase() == sport)
+              .toList();
+        }
+
+        // Empty state
+        if (filteredHighlights.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -588,42 +598,22 @@ Widget _buildReelsSection(BuildContext context, {String? sport}) {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: mockReels.length,
+                  itemCount: filteredHighlights.length,
                   itemBuilder: (context, index) {
-                    final item = mockReels[index];
+                    final highlight = filteredHighlights[index];
                     return TvFocusable(
                       autofocus: index == 0,
                       onSelect: () {
-                        // navigate to reel/video player
+                        AppNavigation.push(
+                          context,
+                          "starPlayerVideo/${highlight.id}",
+                        );
                       },
                       child: ReelHighlightCard(
-                        // For mock data, create a StarPlayerResponse
                         starPlayerResponse: StarPlayerResponse(
                           success: true,
                           count: 1,
-                          highlights: [
-                            StarPlayerModel(
-                              id: 'mock_$index',
-                              sport: SportModel(
-                                id: 'mock_sport',
-                                name: item['sport'] ?? 'Cricket',
-                                slug: '',
-                              ),
-                              player: null,
-                              playerName: item['topicName'] ?? 'Star Player',
-                              team: item['topicContent'] ?? '',
-                              title: item['topicName'] ?? 'Star Player Edition',
-                              thumbnail: item['image'] ?? AppImage.background,
-                              videoUrl: '',
-                              type: 'highlight',
-                              duration: '5 min',
-                              isFeatured: true,
-                              isPremium: false,
-                              liveLogo: '',
-                              showLiveLogo: false,
-                              sources: [],
-                            ),
-                          ],
+                          highlights: [highlight],
                         ),
                       ),
                     );
@@ -633,54 +623,9 @@ Widget _buildReelsSection(BuildContext context, {String? sport}) {
             ),
           ],
         );
-      }
-
-      // Success state with real data
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              sport == null || sport == 'HOME'
-                  ? "Star Player Edition"
-                  : "$sport Star Players",
-              style: text24(),
-            ),
-          ),
-          SizedBox(
-            height: 260,
-            child: FocusTraversalGroup(
-              policy: WidgetOrderTraversalPolicy(),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredPlayers.length,
-                itemBuilder: (context, index) {
-                  final player = filteredPlayers[index];
-                  return TvFocusable(
-                    autofocus: index == 0,
-                    onSelect: () {
-                      // Navigate to reel/video player
-                      // AppNavigation.push(context, "/reel/${player.id}");
-                    },
-                    child: ReelHighlightCard(
-                      starPlayerResponse: StarPlayerResponse(
-                        success: true,
-                        count: 1,
-                        highlights: [player],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
+      },
+    );
+  }
 
   Widget _buildPodcastsSection(BuildContext context, {String? sport}) {
     // TODO: Replace with real data from API filtered by sport
@@ -741,45 +686,9 @@ Widget _buildReelsSection(BuildContext context, {String? sport}) {
     );
   }
 
-  // Mock data - replace with real API calls once the backend exposes
-  // reels/podcasts endpoints. (Highlights now use HighlightBloc above.)
-  List<Map<String, String>> _getReels(String? sport) {
-    final allReels = [
-      {
-        "image": AppImage.background,
-        "sport": "Cricket",
-        "topicName": "Last-ball thriller",
-        "topicContent": "SAI Kings edge Gladiators",
-      },
-      {
-        "image": AppImage.background,
-        "sport": "Football",
-        "topicName": "Hat-trick heroics",
-        "topicContent": "Champions dominate 4-1",
-      },
-      {
-        "image": AppImage.background,
-        "sport": "Hockey",
-        "topicName": "Goal of the match",
-        "topicContent": "India stuns Netherlands",
-      },
-      {
-        "image": AppImage.background,
-        "topicName": "Century in style",
-        "sport": "Cricket",
-        "topicContent": "Royals seal the series",
-      },
-    ];
-
-    if (sport == null || sport == 'HOME') {
-      return allReels;
-    }
-
-    return allReels
-        .where((item) => item['sport']?.toUpperCase() == sport)
-        .toList();
-  }
-
+  // Mock data - replace with real API calls once the backend exposes a
+  // podcasts endpoint. (Highlights and Star Players are already wired to
+  // their real APIs above.)
   List<Map<String, String>> _getPodcasts(String? sport) {
     final allPodcasts = [
       {
@@ -873,15 +782,15 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
   @override
   void initState() {
     super.initState();
-    context
-        .read<SeriesBloc>()
-        .add(SeriesEvent.getSeriesDetail(id: widget.series.id));
+    context.read<SeriesBloc>().add(
+      SeriesEvent.getSeriesDetail(id: widget.series.id),
+    );
   }
 
   void _retry() {
-    context
-        .read<SeriesBloc>()
-        .add(SeriesEvent.getSeriesDetail(id: widget.series.id));
+    context.read<SeriesBloc>().add(
+      SeriesEvent.getSeriesDetail(id: widget.series.id),
+    );
   }
 
   @override
@@ -964,8 +873,7 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "No matches available yet",
-                        style:
-                            text17(color: AppColors.white.withOpacity(0.6)),
+                        style: text17(color: AppColors.white.withOpacity(0.6)),
                       ),
                     ),
                   );
@@ -982,10 +890,7 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
                       return TvFocusable(
                         autofocus: index == 0,
                         onSelect: () {
-                          AppNavigation.push(
-                            context,
-                            "matchVideo/${match.id}",
-                          );
+                          AppNavigation.push(context, "matchVideo/${match.id}");
                         },
                         child: _MatchCard(match: match),
                       );

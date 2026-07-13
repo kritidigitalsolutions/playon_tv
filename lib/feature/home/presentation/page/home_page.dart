@@ -16,7 +16,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
-  
+
   final tabs = const [
     "HOME",
     "CRICKET",
@@ -91,55 +91,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  final FocusNode _searchFieldFocus = FocusNode();
+
   Widget _buildTopBar({required TextEditingController controller}) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0),
+      padding: const EdgeInsets.only(top: 10),
       child: Row(
         children: [
           Image.asset(AppImage.logo, width: 120, height: 55, fit: BoxFit.cover),
           const SizedBox(width: 30),
+
           Expanded(
             child: TvFocusable(
               autofocus: true,
               borderRadius: BorderRadius.circular(30),
               onSelect: () {
                 _searchFieldFocus.requestFocus();
+                AppNavigation.push(context, "/searchPage");
               },
-              child: AppTextField(
-                controller: controller,
-                focusNode: _searchFieldFocus,
-                hintText: "Search Matches",
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(left: 14, right: 10),
-                  child: Icon(
-                    Icons.search,
-                    size: 22,
-                    color: AppColors.textSecondary,
+              child: IgnorePointer(
+                child: AppTextField(
+                  controller: controller,
+                  focusNode: _searchFieldFocus,
+                  hintText: "Search Matches",
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(left: 14, right: 10),
+                    child: Icon(
+                      Icons.search,
+                      size: 22,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          TvFocusable(
-            borderRadius: BorderRadius.circular(50),
-            onSelect: () {},
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.textSecondary.withAlpha(40),
-              child: const Icon(Icons.person),
-            ),
-          ),
-          const SizedBox(width: 15),
-          TvFocusable(
-            borderRadius: BorderRadius.circular(50),
-            onSelect: () {
-              AppNavigation.push(context, "notification");
-            },
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.warning.withAlpha(40),
-              child: const Icon(Icons.notifications, color: AppColors.warning),
             ),
           ),
           const SizedBox(width: 20),
@@ -147,6 +131,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  final FocusNode _searchFieldFocus = FocusNode();
 }

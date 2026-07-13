@@ -84,7 +84,13 @@ class _HighlightTornamentPageState extends State<HighlightTornamentPage> {
                   }
 
                   final filtered = _filteredHighlights(state.highlights);
-
+                  debugPrint('widget.id = ${widget.id}');
+                  debugPrint(
+                    'all series ids = ${state.highlights.map((h) => h.series.id).toList()}',
+                  );
+                  debugPrint(
+                    'filtered count = ${filtered.length} / total = ${state.highlights.length}',
+                  );
                   if (filtered.isEmpty) {
                     return Center(
                       child: Text(

@@ -1,58 +1,46 @@
 import 'package:equatable/equatable.dart';
 
-class StarPlayerResponse extends Equatable {
+class StarPlayerDetailResponse extends Equatable {
   final bool success;
-  final int count;
-  final List<StarPlayerModel> highlights;
+  final StarPlayerDetailModel highlight;
 
-  const StarPlayerResponse({
+  const StarPlayerDetailResponse({
     required this.success,
-    required this.count,
-    required this.highlights,
+    required this.highlight,
   });
 
-  factory StarPlayerResponse.fromJson(Map<String, dynamic> json) {
-    return StarPlayerResponse(
+  factory StarPlayerDetailResponse.fromJson(Map<String, dynamic> json) {
+    return StarPlayerDetailResponse(
       success: json['success'] ?? false,
-      count: json['count'] ?? 0,
-      highlights: (json['highlights'] as List<dynamic>? ?? [])
-          .map((e) => StarPlayerModel.fromJson(e))
-          .toList(),
+      highlight: StarPlayerDetailModel.fromJson(json['highlight']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'success': success,
-      'count': count,
-      'highlights': highlights.map((e) => e.toJson()).toList(),
+      'highlight': highlight.toJson(),
     };
   }
 
-  StarPlayerResponse copyWith({
+  StarPlayerDetailResponse copyWith({
     bool? success,
-    int? count,
-    List<StarPlayerModel>? highlights,
+    StarPlayerDetailModel? highlight,
   }) {
-    return StarPlayerResponse(
+    return StarPlayerDetailResponse(
       success: success ?? this.success,
-      count: count ?? this.count,
-      highlights: highlights ?? this.highlights,
+      highlight: highlight ?? this.highlight,
     );
   }
 
   @override
-  List<Object?> get props => [
-        success,
-        count,
-        highlights,
-      ];
+  List<Object?> get props => [success, highlight];
 }
 
-class StarPlayerModel extends Equatable {
+class StarPlayerDetailModel extends Equatable {
   final String id;
-  final SportModel? sport;
-  final PlayerModel? player;
+  final SportModel sport;
+  final PlayerModel player;
   final String playerName;
   final String team;
   final String title;
@@ -62,16 +50,16 @@ class StarPlayerModel extends Equatable {
   final String duration;
   final bool isFeatured;
   final bool isPremium;
+  final String createdAt;
+  final String updatedAt;
+  final List<dynamic> sources;
   final String liveLogo;
   final bool showLiveLogo;
-  final List<dynamic> sources;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
 
-  const StarPlayerModel({
+  const StarPlayerDetailModel({
     required this.id,
-    this.sport,
-    this.player,
+    required this.sport,
+    required this.player,
     required this.playerName,
     required this.team,
     required this.title,
@@ -81,48 +69,40 @@ class StarPlayerModel extends Equatable {
     required this.duration,
     required this.isFeatured,
     required this.isPremium,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.sources,
     required this.liveLogo,
     required this.showLiveLogo,
-    required this.sources,
-    this.createdAt,
-    this.updatedAt,
   });
 
-  factory StarPlayerModel.fromJson(Map<String, dynamic> json) {
-    return StarPlayerModel(
+  factory StarPlayerDetailModel.fromJson(Map<String, dynamic> json) {
+    return StarPlayerDetailModel(
       id: json['_id'] ?? '',
-      sport: json['sportId'] != null
-          ? SportModel.fromJson(json['sportId'])
-          : null,
-      player: json['playerId'] != null
-          ? PlayerModel.fromJson(json['playerId'])
-          : null,
+      sport: SportModel.fromJson(json['sportId'] ?? {}),
+      player: PlayerModel.fromJson(json['playerId'] ?? {}),
       playerName: json['playerName'] ?? '',
       team: json['team'] ?? '',
       title: json['title'] ?? '',
-      thumbnail: (json['thumbnail'] ?? '').toString().trim().replaceAll('`', ''),
-      videoUrl: (json['videoUrl'] ?? '').toString().trim().replaceAll('`', ''),
+      thumbnail: json['thumbnail'] ?? '',
+      videoUrl: json['videoUrl'] ?? '',
       type: json['type'] ?? '',
       duration: json['duration'] ?? '',
       isFeatured: json['isFeatured'] ?? false,
       isPremium: json['isPremium'] ?? false,
-      liveLogo: (json['liveLogo'] ?? '').toString().trim().replaceAll('`', ''),
-      showLiveLogo: json['showLiveLogo'] ?? false,
+      createdAt: json['createdAt'] ?? '',
+      updatedAt: json['updatedAt'] ?? '',
       sources: json['sources'] ?? [],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
+      liveLogo: json['liveLogo'] ?? '',
+      showLiveLogo: json['showLiveLogo'] ?? false,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'sportId': sport?.toJson(),
-      'playerId': player?.toJson(),
+      'sportId': sport.toJson(),
+      'playerId': player.toJson(),
       'playerName': playerName,
       'team': team,
       'title': title,
@@ -132,15 +112,15 @@ class StarPlayerModel extends Equatable {
       'duration': duration,
       'isFeatured': isFeatured,
       'isPremium': isPremium,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'sources': sources,
       'liveLogo': liveLogo,
       'showLiveLogo': showLiveLogo,
-      'sources': sources,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
-  StarPlayerModel copyWith({
+  StarPlayerDetailModel copyWith({
     String? id,
     SportModel? sport,
     PlayerModel? player,
@@ -153,13 +133,13 @@ class StarPlayerModel extends Equatable {
     String? duration,
     bool? isFeatured,
     bool? isPremium,
+    String? createdAt,
+    String? updatedAt,
+    List<dynamic>? sources,
     String? liveLogo,
     bool? showLiveLogo,
-    List<dynamic>? sources,
-    DateTime? createdAt,
-    DateTime? updatedAt,
   }) {
-    return StarPlayerModel(
+    return StarPlayerDetailModel(
       id: id ?? this.id,
       sport: sport ?? this.sport,
       player: player ?? this.player,
@@ -172,11 +152,11 @@ class StarPlayerModel extends Equatable {
       duration: duration ?? this.duration,
       isFeatured: isFeatured ?? this.isFeatured,
       isPremium: isPremium ?? this.isPremium,
-      liveLogo: liveLogo ?? this.liveLogo,
-      showLiveLogo: showLiveLogo ?? this.showLiveLogo,
-      sources: sources ?? this.sources,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      sources: sources ?? this.sources,
+      liveLogo: liveLogo ?? this.liveLogo,
+      showLiveLogo: showLiveLogo ?? this.showLiveLogo,
     );
   }
 
@@ -194,11 +174,11 @@ class StarPlayerModel extends Equatable {
         duration,
         isFeatured,
         isPremium,
-        liveLogo,
-        showLiveLogo,
-        sources,
         createdAt,
         updatedAt,
+        sources,
+        liveLogo,
+        showLiveLogo,
       ];
 }
 
@@ -242,11 +222,7 @@ class SportModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        id,
-        name,
-        slug,
-      ];
+  List<Object?> get props => [id, name, slug];
 }
 
 class PlayerModel extends Equatable {
@@ -270,7 +246,7 @@ class PlayerModel extends Equatable {
       name: json['name'] ?? '',
       team: json['team'] ?? '',
       country: json['country'] ?? '',
-      image: (json['image'] ?? '').toString().trim().replaceAll('`', ''),
+      image: json['image'] ?? '',
     );
   }
 

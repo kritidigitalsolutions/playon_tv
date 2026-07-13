@@ -32,5 +32,6 @@ class InjectionBlock {
   );
   static StarPayerCubit get starPayerCubit => StarPayerCubit(
     allStarPlayerUseCase: getIt<AllStarPlayerUseCase>(),
+    starPlayerDetailUseCase: getIt<StarPlayerDetailUseCase>(),
   );
 }

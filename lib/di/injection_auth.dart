@@ -94,4 +94,10 @@ Future<void> _authDependency() async {
     homeDatasource: getIt<HomeDatasource>(),
   );
   getIt.registerLazySingleton<AllStarPlayerUseCase>(() => allStarPlayerUsecase);
+
+  //Star Player Detail
+  final starPlayerDetailUsecase = StarPlayerDetailUseCase(
+    homeDatasource: getIt<HomeDatasource>(),
+  );
+  getIt.registerLazySingleton<StarPlayerDetailUseCase>(() => starPlayerDetailUsecase);
 }

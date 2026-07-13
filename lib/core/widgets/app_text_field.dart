@@ -20,7 +20,7 @@ class AppTextField extends StatefulWidget {
   final VoidCallback? onSubmitted;
   final bool autofocus;
   final bool enabled;
-
+  final void Function(String)? onChanged;
   const AppTextField({
     super.key,
     required this.controller,
@@ -37,6 +37,7 @@ class AppTextField extends StatefulWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.enabled = true,
+    this.onChanged,
   });
 
   @override
@@ -137,6 +138,7 @@ class _AppTextFieldState extends State<AppTextField> {
         child: SizedBox(
           height: 50,
           child: TextFormField(
+            onChanged: widget.onChanged,
             controller: widget.controller,
             focusNode: _innerNode,
             enabled: widget.enabled,

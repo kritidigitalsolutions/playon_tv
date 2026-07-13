@@ -43,7 +43,15 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   VideoPlayerController? _controller;
   ChewieController? _chewieController;
 
-  // Focus nodes
+  // Focus nodes.
+  // NOTE: `_rootFocusNode` is intentionally NOT autofocused and has
+  // `canRequestFocus: false` (see build()). It exists purely so its
+  // `onKeyEvent` can intercept back/escape and "wake up" the overlay
+  // on any key press via bubbling — it must never actually hold
+  // focus itself, or D-pad arrow keys get swallowed here instead of
+  // reaching whichever button is actually focused (that was the
+  // previous bug: this node and `_playPauseFocusNode` both requested
+  // autofocus, and whichever won left arrow keys going nowhere).
   final _rootFocusNode = FocusNode(debugLabel: 'root-controls');
   final _backFocusNode = FocusNode(debugLabel: 'back-button');
   final _playPauseFocusNode = FocusNode(debugLabel: 'play-pause');
@@ -74,14 +82,6 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   void initState() {
     super.initState();
     _scheduleHide();
-    
-    // Listen for focus changes to show/hide controls
-    _rootFocusNode.addListener(() {
-      if (_rootFocusNode.hasFocus && !_visible) {
-        setState(() => _visible = true);
-        _scheduleHide();
-      }
-    });
   }
 
   void _scheduleHide() {
@@ -107,12 +107,12 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
       final current = _controller!.value.position;
       final duration = _controller!.value.duration;
       var target = current + Duration(seconds: seconds);
-      
+
       if (target < Duration.zero) target = Duration.zero;
       if (duration > Duration.zero && target > duration) target = duration;
-      
+
       await _controller!.seekTo(target);
-      
+
       // Show flash animation
       _flashTimer?.cancel();
       setState(() {
@@ -188,7 +188,10 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
       return KeyEventResult.ignored;
     }
 
-    // Wake up controls on any key press
+    // Wake up controls on any key press. This still fires even though
+    // this node never holds focus itself — unhandled key events bubble
+    // up through every ancestor Focus node's onKeyEvent, and this node
+    // sits above all the buttons below.
     _keepAlive();
     return KeyEventResult.ignored;
   }
@@ -198,15 +201,17 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     // If controller is not available yet, show loading
     if (_controller == null || _chewieController == null) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(color: Colors.white),
       );
     }
 
     return Focus(
       focusNode: _rootFocusNode,
-      autofocus: true,
+      // This node must never actually hold focus (see field doc above),
+      // only observe bubbled key events — otherwise D-pad input gets
+      // captured here instead of reaching the real buttons.
+      canRequestFocus: false,
+      skipTraversal: true,
       onKeyEvent: _handleRootKey,
       child: Stack(
         fit: StackFit.expand,
@@ -217,9 +222,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
               setState(() => _visible = !_visible);
               if (_visible) _scheduleHide();
             },
-            child: Container(
-              color: Colors.transparent,
-            ),
+            child: Container(color: Colors.transparent),
           ),
           // Background gradient overlay
           AnimatedOpacity(
@@ -241,86 +244,99 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                     stops: [0.0, 0.3, 0.55, 1.0],
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    // Top bar
-                    SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          _kEdgePadding,
-                          24,
-                          _kEdgePadding,
-                          24,
-                        ),
-                        child: Row(
-                          children: [
-                            // Back button
-                            TvFocusable(
-                              focusNode: _backFocusNode,
-                              borderRadius: BorderRadius.circular(8),
-                              onSelect: () => AppNavigation.pop(context),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.arrow_back_rounded,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            if (widget.title != null)
-                              Expanded(
-                                child: Text(
-                                  widget.title!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                // Single traversal group for the whole overlay. Every
+                // button below — back, rewind, play/pause, forward,
+                // speed, fullscreen, progress bar — now lives in ONE
+                // focus scope, so D-pad Up/Down/Left/Right can move
+                // freely between the top bar, center transport
+                // controls, and bottom row. (Previously the center
+                // and bottom rows were each wrapped in their own
+                // `FocusScope(node: FocusScopeNode(), ...)`, which
+                // (a) rebuilt a brand-new scope node on every single
+                // build — losing focus state constantly — and (b)
+                // walled each row off into its own directional-
+                // traversal island, so Up/Down couldn't cross between
+                // sections at all.)
+                child: FocusTraversalGroup(
+                  policy: ReadingOrderTraversalPolicy(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      // Top bar
+                      SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            _kEdgePadding,
+                            24,
+                            _kEdgePadding,
+                            24,
+                          ),
+                          child: Row(
+                            children: [
+                              // Back button
+                              TvFocusable(
+                                focusNode: _backFocusNode,
+                                borderRadius: BorderRadius.circular(8),
+                                onSelect: () => AppNavigation.pop(context),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.arrow_back_rounded,
                                     color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.2,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black54,
-                                        blurRadius: 8,
-                                      ),
-                                    ],
+                                    size: 28,
                                   ),
                                 ),
                               ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.3),
+                              const SizedBox(width: 20),
+                              if (widget.title != null)
+                                Expanded(
+                                  child: Text(
+                                    widget.title!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black54,
+                                          blurRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Live",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                "Live",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    // Center controls - wrapped in FocusScope for proper navigation
-                    FocusScope(
-                      node: FocusScopeNode(),
-                      child: Center(
+                      const Spacer(),
+                      // Center controls
+                      Center(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -354,7 +370,8 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                               ),
                             ),
                             const SizedBox(width: 40),
-                            // Play/Pause
+                            // Play/Pause — this is the single autofocus
+                            // target in the whole overlay now.
                             AnimatedBuilder(
                               animation: _controller!,
                               builder: (context, _) {
@@ -433,24 +450,21 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                           ],
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    // Bottom controls
-                    SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          _kEdgePadding,
-                          0,
-                          _kEdgePadding,
-                          28,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            FocusScope(
-                              node: FocusScopeNode(),
-                              child: Row(
+                      const Spacer(),
+                      // Bottom controls
+                      SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            _kEdgePadding,
+                            0,
+                            _kEdgePadding,
+                            28,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   // Speed
@@ -458,9 +472,8 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                                     focusNode: _speedFocusNode,
                                     icon: Icons.speed_rounded,
                                     label: _getSpeedLabel(),
-                                    onSelect: () => _openPanel(
-                                      TVSettingsCategory.speed,
-                                    ),
+                                    onSelect: () =>
+                                        _openPanel(TVSettingsCategory.speed),
                                   ),
                                   const SizedBox(width: 28),
                                   // Fullscreen
@@ -486,20 +499,20 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(height: 14),
-                            // Progress bar
-                            _TVProgressBar(
-                              controller: _controller!,
-                              focusNode: _progressFocusNode,
-                              formatDuration: _fmt,
-                              onKeepAlive: _keepAlive,
-                            ),
-                          ],
+                              const SizedBox(height: 14),
+                              // Progress bar
+                              _TVProgressBar(
+                                controller: _controller!,
+                                focusNode: _progressFocusNode,
+                                formatDuration: _fmt,
+                                onKeepAlive: _keepAlive,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

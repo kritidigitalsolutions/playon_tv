@@ -6,7 +6,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pinput/pinput.dart';
 import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/animated.dart';
@@ -86,6 +85,8 @@ class _LoginTvPageState extends State<LoginTvPage> {
             otpController.text.length - 1,
           );
         });
+        // Update the bloc with the new value
+        context.read<AuthBloc>().add(AuthEvent.otp(otpController.text));
       }
       return KeyEventResult.handled;
     }
@@ -95,9 +96,11 @@ class _LoginTvPageState extends State<LoginTvPage> {
       setState(() {
         otpController.text += digit;
       });
+      // Update the bloc with the new value
+      context.read<AuthBloc>().add(AuthEvent.otp(otpController.text));
+
       if (otpController.text.length == _pinLength) {
         debugPrint('PIN entered: ${otpController.text}');
-
         _submitFocusNode.requestFocus();
       }
       return KeyEventResult.handled;
@@ -132,7 +135,61 @@ class _LoginTvPageState extends State<LoginTvPage> {
   String? _digitFor(KeyboardKey key) => _digitKeyMap[key];
 
   void _submit() {
-    context.read<AuthBloc>().add(AuthEvent.loginTv());
+    if (otpController.text.length == _pinLength) {
+      context.read<AuthBloc>().add(AuthEvent.loginTv());
+    }
+  }
+
+  // Helper to build PIN indicator dots for TV
+  Widget _buildPinDisplay() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: List.generate(_pinLength, (index) {
+        final bool isFilled = index < otpController.text.length;
+        final bool isFocused =
+            index == otpController.text.length &&
+            otpController.text.length < _pinLength;
+
+        return Container(
+          width: 76,
+          height: 88,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            color: isFilled
+                ? AppColors.primary.withOpacity(0.15)
+                : AppColors.background,
+            border: Border.all(
+              color: isFocused ? AppColors.primary : AppColors.grey400,
+              width: isFocused ? 3 : 2,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isFocused
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 12,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: isFilled
+                ? Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                : isFocused
+                ? Container(width: 30, height: 3, color: AppColors.primary)
+                : null,
+          ),
+        );
+      }),
+    );
   }
 
   @override
@@ -140,41 +197,6 @@ class _LoginTvPageState extends State<LoginTvPage> {
     final size = MediaQuery.sizeOf(context);
 
     final horizontalPadding = size.width * 0.06;
-
-    // TV-optimized PIN theme
-    final defaultPinTheme = PinTheme(
-      width: 76,
-      height: 88,
-      textStyle: const TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.w600,
-        color: AppColors.primary,
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary, width: 2),
-        borderRadius: BorderRadius.circular(12),
-        color: AppColors.background,
-      ),
-    );
-
-    final focusedPinTheme = defaultPinTheme.copyDecorationWith(
-      border: Border.all(color: AppColors.primary, width: 3),
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: AppColors.primary.withOpacity(0.3),
-          blurRadius: 12,
-          spreadRadius: 2,
-        ),
-      ],
-    );
-
-    final submittedPinTheme = defaultPinTheme.copyWith(
-      decoration: defaultPinTheme.decoration!.copyWith(
-        color: AppColors.primary.withOpacity(0.15),
-        border: Border.all(color: AppColors.primary, width: 2),
-      ),
-    );
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
@@ -205,7 +227,10 @@ class _LoginTvPageState extends State<LoginTvPage> {
                             width: double.infinity,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppColors.primary),
-                            child: Image.asset(AppImage.tv, fit: BoxFit.contain),
+                            child: Image.asset(
+                              AppImage.tv,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
                       ),
@@ -234,49 +259,23 @@ class _LoginTvPageState extends State<LoginTvPage> {
                             ),
                             const SizedBox(height: 24),
 
+                            // Custom PIN input for TV with hardware keyboard support
                             Focus(
                               focusNode: _pinKeyFocusNode,
                               autofocus: true,
                               onKeyEvent: _handlePinKey,
-                              child: Pinput(
-                                keyboardType: TextInputType.number,
-                                
-                                onChanged: (value) {
-                                  context.read<AuthBloc>().add(
-                                    AuthEvent.otp(value),
-                                  );
-                                },
-                                length: _pinLength,
-                                controller: otpController,
-                                defaultPinTheme: defaultPinTheme,
-                                focusedPinTheme: focusedPinTheme,
-                                submittedPinTheme: submittedPinTheme,
-                                showCursor: true,
-                                cursor: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      width: 30,
-                                      height: 3,
-                                      color: AppColors.primary,
-                                    ),
-                                  ],
-                                ),
-                                readOnly: false,
-                                useNativeKeyboard: true,
-                                // enableSuggestions: false,
-                                // toolbarEnabled: false,
-                              ),
+                              child: _buildPinDisplay(),
+                            ),
+
+                            const SizedBox(height: 8),
+                            Text(
+                              "Use number keys on your remote to enter the code",
+                              style: text14(color: AppColors.grey500),
                             ),
                             const SizedBox(height: 32),
                             SizedBox(
                               height: 56,
                               width: 220,
-                              // TvFocusable owns both remote "select" presses
-                              // AND taps (its internal GestureDetector is
-                              // opaque and sits above the child), so `onSelect`
-                              // is the single place the submit action must live.
-                              // AppButton's own onTap will never be reached.
                               child: TvFocusable(
                                 focusNode: _submitFocusNode,
                                 borderRadius: BorderRadius.circular(10),

@@ -120,6 +120,14 @@ class _TVSettingsPanelState extends State<TVSettingsPanel>
                 // traversal contained inside the panel instead of
                 // being able to jump focus out into those hidden
                 // controls.
+                //
+                // Note this FocusScope does NOT pass an explicit
+                // `node:` — it's left for the widget to manage its own
+                // internal FocusScopeNode across rebuilds. (Passing a
+                // freshly-constructed `FocusScopeNode()` here on every
+                // build, the way the video controls overlay used to,
+                // would tear the scope down and rebuild it on every
+                // rebuild instead of keeping it stable.)
                 child: FocusScope(
                   debugLabel: 'tv-settings-panel-scope',
                   child: Column(
@@ -187,14 +195,21 @@ class _TVSettingsPanelState extends State<TVSettingsPanel>
   Widget _buildBody() {
     switch (widget.category) {
       case TVSettingsCategory.speed:
-        return _SpeedList(controller: widget.controller);
+        // `onClose` is threaded through so picking a speed can close
+        // the panel automatically instead of requiring a separate
+        // back/escape press.
+        return _SpeedList(
+          controller: widget.controller,
+          onClose: widget.onClose,
+        );
     }
   }
 }
 
 class _SpeedList extends StatefulWidget {
-  const _SpeedList({required this.controller});
+  const _SpeedList({required this.controller, required this.onClose});
   final VideoPlayerController controller;
+  final VoidCallback onClose;
 
   @override
   State<_SpeedList> createState() => _SpeedListState();
@@ -220,7 +235,15 @@ class _SpeedListState extends State<_SpeedList> {
               icon: Icons.speed_rounded,
               label: s == 1.0 ? 'Normal' : '${s}x',
               selected: selected,
-              onSelect: () => controller.setPlaybackSpeed(s),
+              onSelect: () {
+                controller.setPlaybackSpeed(s);
+                // Brief delay so the checkmark visibly lands on the
+                // newly-selected row before the panel closes itself —
+                // feels intentional rather than instant/jarring.
+                Future.delayed(const Duration(milliseconds: 220), () {
+                  if (mounted) widget.onClose();
+                });
+              },
             );
           },
         );

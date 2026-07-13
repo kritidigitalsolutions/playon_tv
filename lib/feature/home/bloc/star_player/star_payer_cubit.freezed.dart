@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$StarPayerState {
 
- List<StarPlayerModel> get starPlayers; Status get allPlayerStatus;
+ StarPlayerResponse? get starPlayers; Status get allPlayerStatus; StarPlayerDetailResponse? get starPlayerDetail; Status get starPlayerDetailStatus;
 /// Create a copy of StarPayerState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $StarPayerStateCopyWith<StarPayerState> get copyWith => _$StarPayerStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is StarPayerState&&const DeepCollectionEquality().equals(other.starPlayers, starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(starPlayers),allPlayerStatus);
+int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus);
 
 @override
 String toString() {
-  return 'StarPayerState(starPlayers: $starPlayers, allPlayerStatus: $allPlayerStatus)';
+  return 'StarPayerState(starPlayers: $starPlayers, allPlayerStatus: $allPlayerStatus, starPlayerDetail: $starPlayerDetail, starPlayerDetailStatus: $starPlayerDetailStatus)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $StarPayerStateCopyWith<$Res>  {
   factory $StarPayerStateCopyWith(StarPayerState value, $Res Function(StarPayerState) _then) = _$StarPayerStateCopyWithImpl;
 @useResult
 $Res call({
- List<StarPlayerModel> starPlayers, Status allPlayerStatus
+ StarPlayerResponse? starPlayers, Status allPlayerStatus, StarPlayerDetailResponse? starPlayerDetail, Status starPlayerDetailStatus
 });
 
 
@@ -62,10 +62,12 @@ class _$StarPayerStateCopyWithImpl<$Res>
 
 /// Create a copy of StarPayerState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? starPlayers = null,Object? allPlayerStatus = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? starPlayers = freezed,Object? allPlayerStatus = null,Object? starPlayerDetail = freezed,Object? starPlayerDetailStatus = null,}) {
   return _then(_self.copyWith(
-starPlayers: null == starPlayers ? _self.starPlayers : starPlayers // ignore: cast_nullable_to_non_nullable
-as List<StarPlayerModel>,allPlayerStatus: null == allPlayerStatus ? _self.allPlayerStatus : allPlayerStatus // ignore: cast_nullable_to_non_nullable
+starPlayers: freezed == starPlayers ? _self.starPlayers : starPlayers // ignore: cast_nullable_to_non_nullable
+as StarPlayerResponse?,allPlayerStatus: null == allPlayerStatus ? _self.allPlayerStatus : allPlayerStatus // ignore: cast_nullable_to_non_nullable
+as Status,starPlayerDetail: freezed == starPlayerDetail ? _self.starPlayerDetail : starPlayerDetail // ignore: cast_nullable_to_non_nullable
+as StarPlayerDetailResponse?,starPlayerDetailStatus: null == starPlayerDetailStatus ? _self.starPlayerDetailStatus : starPlayerDetailStatus // ignore: cast_nullable_to_non_nullable
 as Status,
   ));
 }
@@ -151,10 +153,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<StarPlayerModel> starPlayers,  Status allPlayerStatus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( StarPlayerResponse? starPlayers,  Status allPlayerStatus,  StarPlayerDetailResponse? starPlayerDetail,  Status starPlayerDetailStatus)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _StarPayerState() when $default != null:
-return $default(_that.starPlayers,_that.allPlayerStatus);case _:
+return $default(_that.starPlayers,_that.allPlayerStatus,_that.starPlayerDetail,_that.starPlayerDetailStatus);case _:
   return orElse();
 
 }
@@ -172,10 +174,10 @@ return $default(_that.starPlayers,_that.allPlayerStatus);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<StarPlayerModel> starPlayers,  Status allPlayerStatus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( StarPlayerResponse? starPlayers,  Status allPlayerStatus,  StarPlayerDetailResponse? starPlayerDetail,  Status starPlayerDetailStatus)  $default,) {final _that = this;
 switch (_that) {
 case _StarPayerState():
-return $default(_that.starPlayers,_that.allPlayerStatus);case _:
+return $default(_that.starPlayers,_that.allPlayerStatus,_that.starPlayerDetail,_that.starPlayerDetailStatus);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -192,10 +194,10 @@ return $default(_that.starPlayers,_that.allPlayerStatus);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<StarPlayerModel> starPlayers,  Status allPlayerStatus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( StarPlayerResponse? starPlayers,  Status allPlayerStatus,  StarPlayerDetailResponse? starPlayerDetail,  Status starPlayerDetailStatus)?  $default,) {final _that = this;
 switch (_that) {
 case _StarPayerState() when $default != null:
-return $default(_that.starPlayers,_that.allPlayerStatus);case _:
+return $default(_that.starPlayers,_that.allPlayerStatus,_that.starPlayerDetail,_that.starPlayerDetailStatus);case _:
   return null;
 
 }
@@ -207,17 +209,13 @@ return $default(_that.starPlayers,_that.allPlayerStatus);case _:
 
 
 class _StarPayerState implements StarPayerState {
-  const _StarPayerState({final  List<StarPlayerModel> starPlayers = const [], this.allPlayerStatus = Status.init}): _starPlayers = starPlayers;
+  const _StarPayerState({this.starPlayers = null, this.allPlayerStatus = Status.init, this.starPlayerDetail = null, this.starPlayerDetailStatus = Status.init});
   
 
- final  List<StarPlayerModel> _starPlayers;
-@override@JsonKey() List<StarPlayerModel> get starPlayers {
-  if (_starPlayers is EqualUnmodifiableListView) return _starPlayers;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_starPlayers);
-}
-
+@override@JsonKey() final  StarPlayerResponse? starPlayers;
 @override@JsonKey() final  Status allPlayerStatus;
+@override@JsonKey() final  StarPlayerDetailResponse? starPlayerDetail;
+@override@JsonKey() final  Status starPlayerDetailStatus;
 
 /// Create a copy of StarPayerState
 /// with the given fields replaced by the non-null parameter values.
@@ -229,16 +227,16 @@ _$StarPayerStateCopyWith<_StarPayerState> get copyWith => __$StarPayerStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StarPayerState&&const DeepCollectionEquality().equals(other._starPlayers, _starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_starPlayers),allPlayerStatus);
+int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus);
 
 @override
 String toString() {
-  return 'StarPayerState(starPlayers: $starPlayers, allPlayerStatus: $allPlayerStatus)';
+  return 'StarPayerState(starPlayers: $starPlayers, allPlayerStatus: $allPlayerStatus, starPlayerDetail: $starPlayerDetail, starPlayerDetailStatus: $starPlayerDetailStatus)';
 }
 
 
@@ -249,7 +247,7 @@ abstract mixin class _$StarPayerStateCopyWith<$Res> implements $StarPayerStateCo
   factory _$StarPayerStateCopyWith(_StarPayerState value, $Res Function(_StarPayerState) _then) = __$StarPayerStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<StarPlayerModel> starPlayers, Status allPlayerStatus
+ StarPlayerResponse? starPlayers, Status allPlayerStatus, StarPlayerDetailResponse? starPlayerDetail, Status starPlayerDetailStatus
 });
 
 
@@ -266,10 +264,12 @@ class __$StarPayerStateCopyWithImpl<$Res>
 
 /// Create a copy of StarPayerState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? starPlayers = null,Object? allPlayerStatus = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? starPlayers = freezed,Object? allPlayerStatus = null,Object? starPlayerDetail = freezed,Object? starPlayerDetailStatus = null,}) {
   return _then(_StarPayerState(
-starPlayers: null == starPlayers ? _self._starPlayers : starPlayers // ignore: cast_nullable_to_non_nullable
-as List<StarPlayerModel>,allPlayerStatus: null == allPlayerStatus ? _self.allPlayerStatus : allPlayerStatus // ignore: cast_nullable_to_non_nullable
+starPlayers: freezed == starPlayers ? _self.starPlayers : starPlayers // ignore: cast_nullable_to_non_nullable
+as StarPlayerResponse?,allPlayerStatus: null == allPlayerStatus ? _self.allPlayerStatus : allPlayerStatus // ignore: cast_nullable_to_non_nullable
+as Status,starPlayerDetail: freezed == starPlayerDetail ? _self.starPlayerDetail : starPlayerDetail // ignore: cast_nullable_to_non_nullable
+as StarPlayerDetailResponse?,starPlayerDetailStatus: null == starPlayerDetailStatus ? _self.starPlayerDetailStatus : starPlayerDetailStatus // ignore: cast_nullable_to_non_nullable
 as Status,
   ));
 }

@@ -5,7 +5,7 @@ class AllStarPlayerUseCase {
   final HomeDatasource homeDatasource;
 
   AllStarPlayerUseCase({required this.homeDatasource});
-  Future<List<StarPlayerModel>> call() async {
+  Future<StarPlayerResponse?> call() async {
     return await homeDatasource.allStarPlayers();
   }
 }
