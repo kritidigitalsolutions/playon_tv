@@ -21,17 +21,29 @@ class VideoControlsOverlay extends StatefulWidget {
     this.title,
     required this.isFullscreen,
     required this.onFullscreenChanged,
-    this.showFullscreenButton = true, // NEW — lets a page hide just this button
+    this.showFullscreenButton = true, // lets a page hide just this button
+    // NEW — captions
+    this.captionsAvailable,
+    this.captionsEnabled,
+    this.onCaptionsToggle,
   });
 
   final String? title;
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
-  final bool showFullscreenButton; // NEW
+  final bool showFullscreenButton;
+
+  /// NEW — pass ValueNotifiers so this button can react live without
+  /// needing to rebuild the ChewieController (which owns this widget
+  /// as a fixed `customControls` instance).
+  final ValueNotifier<bool>? captionsAvailable;
+  final ValueNotifier<bool>? captionsEnabled;
+  final VoidCallback? onCaptionsToggle;
 
   @override
   State<VideoControlsOverlay> createState() => _VideoControlsOverlayState();
 }
+
 class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   bool _visible = true;
   Timer? _hideTimer;
@@ -47,20 +59,24 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   // Focus nodes.
   // NOTE: `_rootFocusNode` is intentionally NOT autofocused and has
   // `canRequestFocus: false` (see build()). It exists purely so its
-  // `onKeyEvent` can intercept back/escape and "wake up" the overlay
-  // on any key press via bubbling — it must never actually hold
-  // focus itself, or D-pad arrow keys get swallowed here instead of
-  // reaching whichever button is actually focused (that was the
-  // previous bug: this node and `_playPauseFocusNode` both requested
-  // autofocus, and whichever won left arrow keys going nowhere).
+  // `onKeyEvent` can intercept back/escape and arrow keys and route
+  // them explicitly — it must never actually hold focus itself, or
+  // D-pad input gets swallowed here instead of reaching whichever
+  // button is actually focused.
   final _rootFocusNode = FocusNode(debugLabel: 'root-controls');
   final _backFocusNode = FocusNode(debugLabel: 'back-button');
   final _playPauseFocusNode = FocusNode(debugLabel: 'play-pause');
   final _rewindFocusNode = FocusNode(debugLabel: 'rewind');
   final _forwardFocusNode = FocusNode(debugLabel: 'forward');
   final _speedFocusNode = FocusNode(debugLabel: 'speed');
+  final _captionsFocusNode = FocusNode(debugLabel: 'captions'); // NEW
   final _fullscreenFocusNode = FocusNode(debugLabel: 'fullscreen');
   final _progressFocusNode = FocusNode(debugLabel: 'progress');
+
+  // Fallback notifier used only if the caller never supplies
+  // `captionsEnabled` — avoids ever constructing a fresh ValueNotifier
+  // mid-build (which would break equality/listening every frame).
+  final ValueNotifier<bool> _fallbackCaptionsEnabled = ValueNotifier(false);
 
   // Track if we're seeking to prevent conflicts
   bool _isSeeking = false;
@@ -158,8 +174,10 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     _rewindFocusNode.dispose();
     _forwardFocusNode.dispose();
     _speedFocusNode.dispose();
+    _captionsFocusNode.dispose();
     _fullscreenFocusNode.dispose();
     _progressFocusNode.dispose();
+    _fallbackCaptionsEnabled.dispose();
     super.dispose();
   }
 
@@ -169,6 +187,64 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     final m = d.inMinutes.remainder(60);
     final s = d.inSeconds.remainder(60);
     return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+  }
+
+  bool get _captionsShown => widget.captionsAvailable?.value ?? false;
+
+  /// Explicit D-pad routing between the known controls.
+  ///
+  /// `ReadingOrderTraversalPolicy` (still used as a fallback below)
+  /// infers direction from widget *geometry*, and gets confused by
+  /// the `Spacer()`s between the top bar / center transport row /
+  /// bottom row / progress bar — that's what made moving into
+  /// Speed/CC/Fullscreen feel unreliable. This hand-written map is
+  /// deterministic instead: each control only ever jumps to a
+  /// specific named neighbour, so behaviour can't drift as the layout
+  /// changes.
+  FocusNode? _neighbor(FocusNode? current, LogicalKeyboardKey key) {
+    final up = key == LogicalKeyboardKey.arrowUp;
+    final down = key == LogicalKeyboardKey.arrowDown;
+    final left = key == LogicalKeyboardKey.arrowLeft;
+    final right = key == LogicalKeyboardKey.arrowRight;
+
+    final hasCaptions = _captionsShown;
+    final hasFullscreen = widget.showFullscreenButton;
+
+    if (current == _backFocusNode) {
+      if (down) return _playPauseFocusNode;
+    } else if (current == _rewindFocusNode) {
+      if (right) return _playPauseFocusNode;
+      if (up) return _backFocusNode;
+      if (down) return _speedFocusNode;
+    } else if (current == _playPauseFocusNode) {
+      if (left) return _rewindFocusNode;
+      if (right) return _forwardFocusNode;
+      if (up) return _backFocusNode;
+      if (down) return _speedFocusNode;
+    } else if (current == _forwardFocusNode) {
+      if (left) return _playPauseFocusNode;
+      if (up) return _backFocusNode;
+      if (down) return _speedFocusNode;
+    } else if (current == _speedFocusNode) {
+      if (up) return _playPauseFocusNode;
+      if (down) return _progressFocusNode;
+      if (right) {
+        if (hasCaptions) return _captionsFocusNode;
+        if (hasFullscreen) return _fullscreenFocusNode;
+      }
+    } else if (current == _captionsFocusNode) {
+      if (up) return _playPauseFocusNode;
+      if (down) return _progressFocusNode;
+      if (left) return _speedFocusNode;
+      if (right && hasFullscreen) return _fullscreenFocusNode;
+    } else if (current == _fullscreenFocusNode) {
+      if (up) return _forwardFocusNode;
+      if (down) return _progressFocusNode;
+      if (left) return hasCaptions ? _captionsFocusNode : _speedFocusNode;
+    } else if (current == _progressFocusNode) {
+      if (up) return _speedFocusNode;
+    }
+    return null;
   }
 
   KeyEventResult _handleRootKey(FocusNode node, KeyEvent event) {
@@ -194,6 +270,25 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     // up through every ancestor Focus node's onKeyEvent, and this node
     // sits above all the buttons below.
     _keepAlive();
+
+    final arrows = {
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.arrowLeft,
+      LogicalKeyboardKey.arrowRight,
+    };
+    // The progress bar owns left/right itself (for seeking) and
+    // marks those as handled there, so only its unhandled up/down
+    // ever reach this point while it's focused.
+    if (arrows.contains(key)) {
+      final current = FocusManager.instance.primaryFocus;
+      final next = _neighbor(current, key);
+      if (next != null && next.canRequestFocus) {
+        next.requestFocus();
+        return KeyEventResult.handled;
+      }
+    }
+
     return KeyEventResult.ignored;
   }
 
@@ -245,19 +340,12 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                     stops: [0.0, 0.3, 0.55, 1.0],
                   ),
                 ),
-                // Single traversal group for the whole overlay. Every
-                // button below — back, rewind, play/pause, forward,
-                // speed, fullscreen, progress bar — now lives in ONE
-                // focus scope, so D-pad Up/Down/Left/Right can move
-                // freely between the top bar, center transport
-                // controls, and bottom row. (Previously the center
-                // and bottom rows were each wrapped in their own
-                // `FocusScope(node: FocusScopeNode(), ...)`, which
-                // (a) rebuilt a brand-new scope node on every single
-                // build — losing focus state constantly — and (b)
-                // walled each row off into its own directional-
-                // traversal island, so Up/Down couldn't cross between
-                // sections at all.)
+                // Single traversal group for the whole overlay. Kept
+                // as a fallback path (e.g. Tab on a remote with a
+                // keyboard attached) — real D-pad movement is routed
+                // explicitly through `_handleRootKey` / `_neighbor`
+                // above, so it no longer depends on this policy
+                // guessing direction from widget position.
                 child: FocusTraversalGroup(
                   policy: ReadingOrderTraversalPolicy(),
                   child: Column(
@@ -372,7 +460,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                             ),
                             const SizedBox(width: 40),
                             // Play/Pause — this is the single autofocus
-                            // target in the whole overlay now.
+                            // target in the whole overlay.
                             AnimatedBuilder(
                               animation: _controller!,
                               builder: (context, _) {
@@ -465,40 +553,74 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                             Row(
-  mainAxisAlignment: MainAxisAlignment.end,
-  children: [
-    // Speed
-    _AccessoryItem(
-      focusNode: _speedFocusNode,
-      icon: Icons.speed_rounded,
-      label: _getSpeedLabel(),
-      onSelect: () => _openPanel(TVSettingsCategory.speed),
-    ),
-    if (widget.showFullscreenButton) ...[
-      const SizedBox(width: 28),
-      // Fullscreen
-      TvFocusable(
-        focusNode: _fullscreenFocusNode,
-        borderRadius: BorderRadius.circular(8),
-        onSelect: () {
-          widget.onFullscreenChanged(!widget.isFullscreen);
-          _keepAlive();
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(
-            widget.isFullscreen
-                ? Icons.fullscreen_exit_rounded
-                : Icons.fullscreen_rounded,
-            color: Colors.white,
-            size: 26,
-          ),
-        ),
-      ),
-    ],
-  ],
-),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  // Speed
+                                  _ControlChip(
+                                    focusNode: _speedFocusNode,
+                                    icon: Icons.speed_rounded,
+                                    label: _getSpeedLabel(),
+                                    onSelect: () =>
+                                        _openPanel(TVSettingsCategory.speed),
+                                  ),
+                                  // NEW — Captions (CC), only shown once
+                                  // a subtitle track has actually loaded.
+                                  if (widget.captionsAvailable != null)
+                                    ValueListenableBuilder<bool>(
+                                      valueListenable:
+                                          widget.captionsAvailable!,
+                                      builder: (context, available, _) {
+                                        if (!available) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 16,
+                                          ),
+                                          child: ValueListenableBuilder<bool>(
+                                            valueListenable:
+                                                widget.captionsEnabled ??
+                                                _fallbackCaptionsEnabled,
+                                            builder: (context, enabled, _) {
+                                              return _ControlChip(
+                                                focusNode: _captionsFocusNode,
+                                                icon: enabled
+                                                    ? Icons
+                                                          .closed_caption_rounded
+                                                    : Icons
+                                                          .closed_caption_off_rounded,
+                                                label: 'CC',
+                                                active: enabled,
+                                                onSelect: () {
+                                                  widget.onCaptionsToggle
+                                                      ?.call();
+                                                  _keepAlive();
+                                                },
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  if (widget.showFullscreenButton) ...[
+                                    const SizedBox(width: 16),
+                                    // Fullscreen
+                                    _ControlIconButton(
+                                      focusNode: _fullscreenFocusNode,
+                                      icon: widget.isFullscreen
+                                          ? Icons.fullscreen_exit_rounded
+                                          : Icons.fullscreen_rounded,
+                                      onSelect: () {
+                                        widget.onFullscreenChanged(
+                                          !widget.isFullscreen,
+                                        );
+                                        _keepAlive();
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
                               const SizedBox(height: 14),
                               // Progress bar
                               _TVProgressBar(
@@ -538,24 +660,120 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   }
 }
 
-class _AccessoryItem extends StatefulWidget {
-  const _AccessoryItem({
+/// Icon + label pill (Speed, CC). Focus is now always visually
+/// obvious: accent border + glow + tinted fill, instead of the old
+/// faint opacity/underline change that was hard to spot on a TV.
+class _ControlChip extends StatefulWidget {
+  const _ControlChip({
     required this.focusNode,
     required this.icon,
     required this.label,
     required this.onSelect,
+    this.active = false,
   });
 
   final FocusNode focusNode;
   final IconData icon;
   final String label;
   final VoidCallback onSelect;
+  final bool active;
 
   @override
-  State<_AccessoryItem> createState() => _AccessoryItemState();
+  State<_ControlChip> createState() => _ControlChipState();
 }
 
-class _AccessoryItemState extends State<_AccessoryItem> {
+class _ControlChipState extends State<_ControlChip> {
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (mounted) setState(() => _focused = widget.focusNode.hasFocus);
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_onFocusChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final highlighted = _focused || widget.active;
+    return TvFocusable(
+      focusNode: widget.focusNode,
+      borderRadius: BorderRadius.circular(24),
+      onSelect: widget.onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: _focused
+              ? _kAccent.withOpacity(0.22)
+              : (widget.active
+                    ? Colors.white.withOpacity(0.16)
+                    : Colors.white.withOpacity(0.06)),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _focused
+                ? _kAccent
+                : (widget.active
+                      ? Colors.white70
+                      : Colors.white.withOpacity(0.25)),
+            width: _focused ? 2 : 1,
+          ),
+          boxShadow: _focused
+              ? [
+                  BoxShadow(
+                    color: _kAccent.withOpacity(0.5),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(widget.icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              widget.label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Icon-only button (Fullscreen). Same visible focus treatment as
+/// `_ControlChip`, just without the label.
+class _ControlIconButton extends StatefulWidget {
+  const _ControlIconButton({
+    required this.focusNode,
+    required this.icon,
+    required this.onSelect,
+  });
+
+  final FocusNode focusNode;
+  final IconData icon;
+  final VoidCallback onSelect;
+
+  @override
+  State<_ControlIconButton> createState() => _ControlIconButtonState();
+}
+
+class _ControlIconButtonState extends State<_ControlIconButton> {
   bool _focused = false;
 
   @override
@@ -578,30 +796,31 @@ class _AccessoryItemState extends State<_AccessoryItem> {
   Widget build(BuildContext context) {
     return TvFocusable(
       focusNode: widget.focusNode,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       onSelect: widget.onSelect,
-      child: AnimatedOpacity(
-        opacity: _focused ? 1.0 : 0.85,
+      child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(widget.icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              widget.label,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: _focused ? FontWeight.w700 : FontWeight.w500,
-                decoration: _focused
-                    ? TextDecoration.underline
-                    : TextDecoration.none,
-                decorationColor: Colors.white,
-              ),
-            ),
-          ],
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: _focused
+              ? _kAccent.withOpacity(0.22)
+              : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: _focused ? _kAccent : Colors.white.withOpacity(0.25),
+            width: _focused ? 2 : 1,
+          ),
+          boxShadow: _focused
+              ? [
+                  BoxShadow(
+                    color: _kAccent.withOpacity(0.5),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
+        child: Icon(widget.icon, color: Colors.white, size: 26),
       ),
     );
   }

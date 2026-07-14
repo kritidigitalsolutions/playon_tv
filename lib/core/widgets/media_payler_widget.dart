@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
+import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:playon/core/widgets/video_control_overlay.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
@@ -12,6 +14,50 @@ bool isYoutubeUrl(String url) {
   final lower = url.toLowerCase();
   return lower.contains('youtube.com') || lower.contains('youtu.be');
 }
+
+// ---------------------------------------------------------------------------
+// Captions
+// ---------------------------------------------------------------------------
+
+class _CaptionCue {
+  _CaptionCue(this.start, this.end, this.text);
+  final Duration start;
+  final Duration end;
+  final String text;
+}
+
+/// Minimal SRT parser — good enough for the common case of a plain
+/// .srt subtitle file. If you need WebVTT too, strip a leading
+/// "WEBVTT" header from [data] before calling this; the timestamp
+/// regex accepts both `,` and `.` as the millisecond separator so it
+/// already matches VTT's `00:00:01.000` style timestamps.
+List<_CaptionCue> _parseSrt(String data) {
+  final cues = <_CaptionCue>[];
+  final blocks = data.replaceAll('\r\n', '\n').split(RegExp(r'\n\n+'));
+  final timeRe = RegExp(
+    r'(\d{2}):(\d{2}):(\d{2})[,.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,.](\d{3})',
+  );
+  for (final block in blocks) {
+    final lines = block.trim().split('\n');
+    if (lines.isEmpty) continue;
+    final i = lines.indexWhere((l) => timeRe.hasMatch(l));
+    if (i == -1) continue;
+    final m = timeRe.firstMatch(lines[i])!;
+    Duration d(int a, int b, int c, int ms) =>
+        Duration(hours: a, minutes: b, seconds: c, milliseconds: ms);
+    final start =
+        d(int.parse(m[1]!), int.parse(m[2]!), int.parse(m[3]!), int.parse(m[4]!));
+    final end =
+        d(int.parse(m[5]!), int.parse(m[6]!), int.parse(m[7]!), int.parse(m[8]!));
+    final text = lines.sublist(i + 1).join('\n').trim();
+    if (text.isNotEmpty) cues.add(_CaptionCue(start, end, text));
+  }
+  return cues;
+}
+
+// ---------------------------------------------------------------------------
+// Public widget
+// ---------------------------------------------------------------------------
 
 class MediaPlayerWidget extends StatefulWidget {
   const MediaPlayerWidget({
@@ -27,8 +73,8 @@ class MediaPlayerWidget extends StatefulWidget {
     required this.isFullscreen,
     required this.onFullscreenChanged,
     this.isBack = true,
-    this.showFullscreenButton =
-        true, // NEW — hide just the fullscreen icon on a given page
+    this.showFullscreenButton = true,
+    this.subtitleUrl, // NEW — optional .srt URL for burned-in captions
   });
 
   final String url;
@@ -39,8 +85,9 @@ class MediaPlayerWidget extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
-  final bool showFullscreenButton; // NEW
+  final bool showFullscreenButton;
   final String? title;
+  final String? subtitleUrl; // NEW
   final void Function(String message)? onError;
   final void Function(
     VideoPlayerController controller,
@@ -69,7 +116,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         onFullscreenChanged: widget.onFullscreenChanged,
         onError: widget.onError,
         onControllerReady: widget.onControllerReady,
-        showFullscreenButton: widget.showFullscreenButton, // NEW
+        showFullscreenButton: widget.showFullscreenButton,
+        subtitleUrl: widget.subtitleUrl, // NEW
       );
     }
 
@@ -84,7 +132,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       onFullscreenChanged: widget.onFullscreenChanged,
       onError: widget.onError,
       onControllerReady: widget.onControllerReady,
-      showFullscreenButton: widget.showFullscreenButton, // NEW
+      showFullscreenButton: widget.showFullscreenButton,
+      subtitleUrl: widget.subtitleUrl, // NEW
     );
   }
 }
@@ -105,7 +154,8 @@ class _YoutubeResolvingPlayer extends StatefulWidget {
     this.title,
     this.onError,
     this.onControllerReady,
-    this.showFullscreenButton = true, // NEW
+    this.showFullscreenButton = true,
+    this.subtitleUrl, // NEW
   });
 
   final String url;
@@ -115,8 +165,9 @@ class _YoutubeResolvingPlayer extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
-  final bool showFullscreenButton; // NEW
+  final bool showFullscreenButton;
   final String? title;
+  final String? subtitleUrl; // NEW
   final void Function(String message)? onError;
   final void Function(
     VideoPlayerController controller,
@@ -219,7 +270,8 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
       onFullscreenChanged: widget.onFullscreenChanged,
       onError: widget.onError,
       onControllerReady: widget.onControllerReady,
-      showFullscreenButton: widget.showFullscreenButton, // NEW
+      showFullscreenButton: widget.showFullscreenButton,
+      subtitleUrl: widget.subtitleUrl, // NEW
     );
   }
 }
@@ -242,7 +294,8 @@ class _NativeMediaPlayer extends StatefulWidget {
     this.title,
     this.onError,
     this.onControllerReady,
-    this.showFullscreenButton = true, // NEW
+    this.showFullscreenButton = true,
+    this.subtitleUrl, // NEW
   });
 
   final String url;
@@ -252,8 +305,9 @@ class _NativeMediaPlayer extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
-  final bool showFullscreenButton; // NEW
+  final bool showFullscreenButton;
   final String? title;
+  final String? subtitleUrl; // NEW
   final void Function(String message)? onError;
   final void Function(
     VideoPlayerController controller,
@@ -273,10 +327,43 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
   int _retryCount = 0;
   final int _maxRetries = 3;
 
+  // NEW — captions. Chewie/video_player expose no runtime API to
+  // switch subtitle tracks, so captions are handled entirely outside
+  // Chewie: fetch + parse the SRT ourselves, then draw the active
+  // cue as our own overlay text, driven by playback position.
+  List<_CaptionCue> _captions = [];
+  final ValueNotifier<bool> _captionsAvailable = ValueNotifier(false);
+  final ValueNotifier<bool> _captionsEnabled = ValueNotifier(true);
+
   @override
   void initState() {
     super.initState();
     _initStream();
+    _loadCaptions();
+  }
+
+  Future<void> _loadCaptions() async {
+    final url = widget.subtitleUrl;
+    if (url == null) return;
+    try {
+      final resp = await http.get(Uri.parse(url));
+      if (resp.statusCode == 200 && mounted) {
+        final cues = _parseSrt(utf8.decode(resp.bodyBytes));
+        setState(() => _captions = cues);
+        _captionsAvailable.value = cues.isNotEmpty;
+      }
+    } catch (_) {
+      // Captions are optional — fail silently rather than
+      // interrupting playback over a missing/broken subtitle file.
+    }
+  }
+
+  String? _currentCaptionText(Duration position) {
+    if (!_captionsEnabled.value || _captions.isEmpty) return null;
+    for (final c in _captions) {
+      if (position >= c.start && position <= c.end) return c.text;
+    }
+    return null;
   }
 
   String _userMessageFor(String raw) {
@@ -353,7 +440,11 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
                 isFullscreen: widget.isFullscreen,
                 onFullscreenChanged: widget.onFullscreenChanged,
                 title: widget.isBack ? widget.title : null,
-                showFullscreenButton: widget.showFullscreenButton, // NEW
+                showFullscreenButton: widget.showFullscreenButton,
+                captionsAvailable: _captionsAvailable, // NEW
+                captionsEnabled: _captionsEnabled, // NEW
+                onCaptionsToggle: () => // NEW
+                    _captionsEnabled.value = !_captionsEnabled.value,
               )
             : const SizedBox.shrink(),
       );
@@ -397,6 +488,11 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
       _retryCount = 0;
       _initStream();
     }
+    if (oldWidget.subtitleUrl != widget.subtitleUrl) {
+      _captions = [];
+      _captionsAvailable.value = false;
+      _loadCaptions();
+    }
   }
 
   void _disposeControllers() {
@@ -410,6 +506,8 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
   @override
   void dispose() {
     _disposeControllers();
+    _captionsAvailable.dispose();
+    _captionsEnabled.dispose();
     super.dispose();
   }
 
@@ -446,6 +544,41 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
               child: CircularProgressIndicator(
                 color: Colors.white,
                 strokeWidth: 3,
+              ),
+            );
+          },
+        ),
+        // NEW — burned-in caption text, redrawn as playback advances.
+        AnimatedBuilder(
+          animation: Listenable.merge([_controller!, _captionsEnabled]),
+          builder: (context, _) {
+            final text = _currentCaptionText(_controller!.value.position);
+            if (text == null) return const SizedBox.shrink();
+            return Positioned(
+              left: 40,
+              right: 40,
+              bottom: 110,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.72),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ),
             );
           },

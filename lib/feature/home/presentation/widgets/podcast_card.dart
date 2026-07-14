@@ -18,7 +18,7 @@ class PodcastCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 180,
-      margin: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsets.all(4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

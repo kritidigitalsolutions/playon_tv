@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-class CategoryResponse extends Equatable{
+class CategoryResponse extends Equatable {
   final bool success;
   final int count;
   final List<ChannelCatagoryModel> categories;
@@ -40,13 +40,13 @@ class CategoryResponse extends Equatable{
       categories: categories ?? this.categories,
     );
   }
-  
+
   @override
   // TODO: implement props
   List<Object?> get props => [success, count, categories];
 }
 
-class ChannelCatagoryModel extends Equatable{
+class ChannelCatagoryModel extends Equatable {
   final String id;
   final String name;
   final String slug;
@@ -108,8 +108,16 @@ class ChannelCatagoryModel extends Equatable{
       v: v ?? this.v,
     );
   }
-  
+
   @override
   // TODO: implement props
-  List<Object?> get props => [id, name, slug, isActive, createdAt, updatedAt, v];
+  List<Object?> get props => [
+    id,
+    name,
+    slug,
+    isActive,
+    createdAt,
+    updatedAt,
+    v,
+  ];
 }

@@ -28,7 +28,7 @@ class _LoginTvPageState extends State<LoginTvPage> {
 
   final otpController = TextEditingController();
 
-  // Focus node for the real (invisible) text field that the PIN dots
+  // Focus node for the real (invisible) text field that the PIN digits
   // sit on top of. Requesting focus on this is what brings up the
   // platform's own system keyboard on Android TV — no custom on-screen
   // keypad needed.
@@ -112,7 +112,7 @@ class _LoginTvPageState extends State<LoginTvPage> {
       _submitFocusNode.requestFocus();
     }
 
-    setState(() {}); // refresh PIN dots
+    setState(() {}); // refresh PIN digits
   }
 
   void _submit() {
@@ -121,18 +121,20 @@ class _LoginTvPageState extends State<LoginTvPage> {
     }
   }
 
-  // Helper to build PIN indicator dots for TV
+  // Helper to build PIN indicator showing actual digits for TV
   Widget _buildPinDisplay() {
     final hasFieldFocus = _pinFieldFocusNode.hasFocus;
+    final pinText = otpController.text;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(_pinLength, (index) {
-        final bool isFilled = index < otpController.text.length;
+        final bool isFilled = index < pinText.length;
+        final String digit = isFilled ? pinText[index] : '';
         final bool isFocused =
             hasFieldFocus &&
-            index == otpController.text.length &&
-            otpController.text.length < _pinLength;
+            index == pinText.length &&
+            pinText.length < _pinLength;
 
         return Container(
           width: 76,
@@ -159,12 +161,12 @@ class _LoginTvPageState extends State<LoginTvPage> {
           ),
           child: Center(
             child: isFilled
-                ? Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(
+                ? Text(
+                    digit,
+                    style: const TextStyle(
                       color: AppColors.primary,
-                      shape: BoxShape.circle,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
                     ),
                   )
                 : isFocused
@@ -176,7 +178,7 @@ class _LoginTvPageState extends State<LoginTvPage> {
     );
   }
 
-  /// PIN entry control: the dot display renders on top, and underneath
+  /// PIN entry control: the digit display renders on top, and underneath
   /// it sits a real (invisible) TextField. Tapping/selecting this area
   /// focuses that field, which is what triggers Android TV's own
   /// system keyboard overlay — no custom keypad UI is drawn by us.
@@ -283,7 +285,7 @@ class _LoginTvPageState extends State<LoginTvPage> {
                               ),
                               const SizedBox(height: 24),
 
-                              // PIN dots + underlying real TextField.
+                              // PIN digits + underlying real TextField.
                               // Selecting/focusing this brings up the
                               // system keyboard — no custom keypad.
                               _buildPinInput(),

@@ -15,7 +15,9 @@ const _kPanelWidth = 400.0;
 /// audio tracks (ExoPlayer/AVPlayer negotiate that internally and
 /// don't surface it through the plugin). So this panel only covers
 /// speed; quality and subtitles/audio categories were removed rather
-/// than wired up to nothing.
+/// than wired up to nothing. (Captions in this app are now handled
+/// separately — see the CC button in video_control_overlay.dart —
+/// since they're driven by our own SRT loader, not a Chewie track.)
 enum TVSettingsCategory { speed }
 
 class TVSettingsPanel extends StatefulWidget {

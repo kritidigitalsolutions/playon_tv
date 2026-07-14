@@ -414,7 +414,7 @@ class _SportsViewState extends State<SportsView> {
         if (state.allHighLightStatus == Status.loading &&
             state.highlights.isEmpty) {
           return SizedBox(
-            height: 250,
+            
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),

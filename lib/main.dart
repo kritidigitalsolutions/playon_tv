@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => InjectionBlock.podcastBloc),
       ],
       child: MaterialApp.router(
+        title: "PlayOn",
         debugShowCheckedModeBanner: false,
         routerConfig: router,
       ),

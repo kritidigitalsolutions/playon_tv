@@ -381,7 +381,7 @@ class _ResultSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: EdgeInsets.all(4),
           child: Text(title, style: text24()),
         ),
         SizedBox(
@@ -503,7 +503,7 @@ class _SeriesResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 220,
-      margin: const EdgeInsets.only(right: 16),
+      padding: EdgeInsets.all(4),
       child: Stack(
         fit: StackFit.expand,
         children: [

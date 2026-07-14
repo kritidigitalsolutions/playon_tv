@@ -1,13 +1,10 @@
 import 'package:equatable/equatable.dart';
 
-class BannerResponse extends Equatable{
+class BannerResponse extends Equatable {
   final bool success;
   final List<BannerModel> banners;
 
-  const BannerResponse({
-    required this.success,
-    required this.banners,
-  });
+  const BannerResponse({required this.success, required this.banners});
 
   factory BannerResponse.fromJson(Map<String, dynamic> json) {
     return BannerResponse(
@@ -25,22 +22,19 @@ class BannerResponse extends Equatable{
     };
   }
 
-  BannerResponse copyWith({
-    bool? success,
-    List<BannerModel>? banners,
-  }) {
+  BannerResponse copyWith({bool? success, List<BannerModel>? banners}) {
     return BannerResponse(
       success: success ?? this.success,
       banners: banners ?? this.banners,
     );
   }
-  
+
   @override
   // TODO: implement props
-  List<Object?> get props => [success,banners];
+  List<Object?> get props => [success, banners];
 }
 
-class BannerModel extends Equatable{
+class BannerModel extends Equatable {
   final String id;
   final String title;
   final String image;
@@ -130,8 +124,20 @@ class BannerModel extends Equatable{
       version: version ?? this.version,
     );
   }
-  
+
   @override
   // TODO: implement props
-  List<Object?> get props => [id,title,image,link,position,isActive,sortOrder,clicks,createdAt,updatedAt,version];
+  List<Object?> get props => [
+    id,
+    title,
+    image,
+    link,
+    position,
+    isActive,
+    sortOrder,
+    clicks,
+    createdAt,
+    updatedAt,
+    version,
+  ];
 }

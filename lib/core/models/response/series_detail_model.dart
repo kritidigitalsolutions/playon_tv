@@ -22,10 +22,10 @@ class SeriesDetailsResponse extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        "success": success,
-        "series": series.toJson(),
-        "matches": matches.map((e) => e.toJson()).toList(),
-      };
+    "success": success,
+    "series": series.toJson(),
+    "matches": matches.map((e) => e.toJson()).toList(),
+  };
 
   SeriesDetailsResponse copyWith({
     bool? success,
@@ -113,26 +113,26 @@ class SeriesDetailModel extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        "_id": id,
-        "title": title,
-        "sport": sport,
-        "slug": slug,
-        "banner": banner,
-        "tournamentLogo": tournamentLogo,
-        "description": description,
-        "teams": teams.map((e) => e.toJson()).toList(),
-        "tourCountry": tourCountry,
-        "startDate": startDate,
-        "endDate": endDate,
-        "status": status,
-        "isFeatured": isFeatured,
-        "isTrending": isTrending,
-        "isHomeScreen": isHomeScreen,
-        "isPremium": isPremium,
-        "createdBy": createdBy,
-        "createdAt": createdAt,
-        "updatedAt": updatedAt,
-      };
+    "_id": id,
+    "title": title,
+    "sport": sport,
+    "slug": slug,
+    "banner": banner,
+    "tournamentLogo": tournamentLogo,
+    "description": description,
+    "teams": teams.map((e) => e.toJson()).toList(),
+    "tourCountry": tourCountry,
+    "startDate": startDate,
+    "endDate": endDate,
+    "status": status,
+    "isFeatured": isFeatured,
+    "isTrending": isTrending,
+    "isHomeScreen": isHomeScreen,
+    "isPremium": isPremium,
+    "createdBy": createdBy,
+    "createdAt": createdAt,
+    "updatedAt": updatedAt,
+  };
 
   SeriesDetailModel copyWith({
     String? id,
@@ -180,26 +180,26 @@ class SeriesDetailModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        sport,
-        slug,
-        banner,
-        tournamentLogo,
-        description,
-        teams,
-        tourCountry,
-        startDate,
-        endDate,
-        status,
-        isFeatured,
-        isTrending,
-        isHomeScreen,
-        isPremium,
-        createdBy,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    title,
+    sport,
+    slug,
+    banner,
+    tournamentLogo,
+    description,
+    teams,
+    tourCountry,
+    startDate,
+    endDate,
+    status,
+    isFeatured,
+    isTrending,
+    isHomeScreen,
+    isPremium,
+    createdBy,
+    createdAt,
+    updatedAt,
+  ];
 }
 
 class MatchModel extends Equatable {
@@ -261,23 +261,23 @@ class MatchModel extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        "_id": id,
-        "title": title,
-        "sport": sport,
-        "teamA": teamA,
-        "teamB": teamB,
-        "teamALogo": teamALogo,
-        "teamBLogo": teamBLogo,
-        "venue": venue,
-        "matchDate": matchDate,
-        "status": status,
-        "thumbnail": thumbnail,
-        "banner": banner,
-        "description": description,
-        "isFeatured": isFeatured,
-        "isTrending": isTrending,
-        "isPremium": isPremium,
-      };
+    "_id": id,
+    "title": title,
+    "sport": sport,
+    "teamA": teamA,
+    "teamB": teamB,
+    "teamALogo": teamALogo,
+    "teamBLogo": teamBLogo,
+    "venue": venue,
+    "matchDate": matchDate,
+    "status": status,
+    "thumbnail": thumbnail,
+    "banner": banner,
+    "description": description,
+    "isFeatured": isFeatured,
+    "isTrending": isTrending,
+    "isPremium": isPremium,
+  };
 
   MatchModel copyWith({
     String? id,
@@ -319,23 +319,23 @@ class MatchModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        sport,
-        teamA,
-        teamB,
-        teamALogo,
-        teamBLogo,
-        venue,
-        matchDate,
-        status,
-        thumbnail,
-        banner,
-        description,
-        isFeatured,
-        isTrending,
-        isPremium,
-      ];
+    id,
+    title,
+    sport,
+    teamA,
+    teamB,
+    teamALogo,
+    teamBLogo,
+    venue,
+    matchDate,
+    status,
+    thumbnail,
+    banner,
+    description,
+    isFeatured,
+    isTrending,
+    isPremium,
+  ];
 }
 
 class Team extends Equatable {
@@ -367,13 +367,13 @@ class Team extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        "_id": id,
-        "name": name,
-        "sport": sport,
-        "logo": logo,
-        "shortName": shortName,
-        "country": country,
-      };
+    "_id": id,
+    "name": name,
+    "sport": sport,
+    "logo": logo,
+    "shortName": shortName,
+    "country": country,
+  };
 
   Team copyWith({
     String? id,

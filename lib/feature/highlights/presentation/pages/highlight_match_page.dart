@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use, unused_element_parameter
+// ignore_for_file: unnecessary_null_comparison, deprecated_member_use, unused_element_parameter
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,8 +39,8 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
   void initState() {
     super.initState();
     context.read<HighlightBloc>().add(
-          HighlightEvent.highlightDetail(id: widget.id),
-        );
+      HighlightEvent.highlightDetail(id: widget.id),
+    );
   }
 
   void _handleFullscreenChanged(bool fullscreen) {
@@ -83,8 +83,8 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
                   ElevatedButton(
                     onPressed: () {
                       context.read<HighlightBloc>().add(
-                            HighlightEvent.highlightDetail(id: widget.id),
-                          );
+                        HighlightEvent.highlightDetail(id: widget.id),
+                      );
                     },
                     child: const Text("Retry"),
                   ),
@@ -326,8 +326,7 @@ class _HighlightMatchContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Tab Content — only real fields per tab; anything
-                  // without a backing field shows "No data found".
+                  // Tab Content — only real data, no mock data
                   _buildTabContent(selectedTabIndex, data),
                   const SizedBox(height: 20),
                 ],
@@ -346,15 +345,15 @@ class _HighlightMatchContent extends StatelessWidget {
       case 1:
         return _SquadTab(data: data);
       case 2:
-        return const _NoDataFound(); // no scorecard fields in API
+        return const _NoDataFound(title: 'Scorecard');
       case 3:
         return _StatsTab(data: data);
       case 4:
-        return const _NoDataFound(); // no performer fields in API
+        return const _NoDataFound(title: 'Performers');
       case 5:
-        return const _NoDataFound(); // no event fields in API
+        return const _NoDataFound(title: 'Event');
       case 6:
-        return const _NoDataFound(); // no comments fields in API
+        return const _NoDataFound(title: 'Comments');
       default:
         return const SizedBox.shrink();
     }
@@ -363,7 +362,8 @@ class _HighlightMatchContent extends StatelessWidget {
 
 /// Shared empty state for any tab without real backing data.
 class _NoDataFound extends StatelessWidget {
-  const _NoDataFound();
+  const _NoDataFound({required this.title});
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -371,7 +371,7 @@ class _NoDataFound extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Text(
-          "No data found",
+          "No $title found",
           style: text16(color: AppColors.white.withOpacity(0.5)),
         ),
       ),
@@ -405,11 +405,7 @@ class _Chip extends StatelessWidget {
 }
 
 class _MatchVersus extends StatelessWidget {
-  const _MatchVersus({
-    super.key,
-    required this.image,
-    required this.teamName,
-  });
+  const _MatchVersus({super.key, required this.image, required this.teamName});
   final String image;
   final String teamName;
 
@@ -429,10 +425,8 @@ class _MatchVersus extends StatelessWidget {
             child: Image.network(
               image,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Image.asset(
-                AppImage.tornamentlogo,
-                fit: BoxFit.cover,
-              ),
+              errorBuilder: (_, __, ___) =>
+                  Image.asset(AppImage.tornamentlogo, fit: BoxFit.cover),
             ),
           ),
         ),
@@ -445,15 +439,18 @@ class _MatchVersus extends StatelessWidget {
 
 // ==================== TAB CONTENT WIDGETS (real data only) ====================
 
-/// Highlights Tab — shows the single fetched video's own info. There's
-/// no "list of highlights" endpoint here, just this one video, so this
-/// renders one card instead of the old 3-item mock list.
+/// Highlights Tab — shows the single fetched video's own info
 class _HighlightsTab extends StatelessWidget {
   final HighLightDetailModel data;
   const _HighlightsTab({required this.data});
 
   @override
   Widget build(BuildContext context) {
+    // Only show if there's real data
+    if (data.title.isEmpty && data.thumbnail.isEmpty && data.duration == 0) {
+      return const _NoDataFound(title: 'Highlights');
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -486,11 +483,12 @@ class _HighlightsTab extends StatelessWidget {
                             height: 68,
                           ),
                         )
-                      : Image.asset(
-                          AppImage.background,
-                          fit: BoxFit.cover,
-                          width: 120,
-                          height: 68,
+                      : Center(
+                          child: Icon(
+                            Icons.broken_image,
+                            color: Colors.white,
+                            size: 40,
+                          ),
                         ),
                   Container(
                     padding: const EdgeInsets.all(6),
@@ -568,19 +566,26 @@ class _HighlightsTab extends StatelessWidget {
   }
 }
 
-/// Squad Tab — only team names + logos are real; there's no player
-/// roster field on the model, so no player list is shown.
+/// Squad Tab — only team names + logos are real
 class _SquadTab extends StatelessWidget {
   final HighLightDetailModel data;
   const _SquadTab({required this.data});
 
   @override
   Widget build(BuildContext context) {
+    // Check if there's real squad data
+    final hasTeamA = data.teamA.name.isNotEmpty || data.teamA.logo.isNotEmpty;
+    final hasTeamB = data.teamB.name.isNotEmpty || data.teamB.logo.isNotEmpty;
+
+    if (!hasTeamA && !hasTeamB) {
+      return const _NoDataFound(title: 'Squad');
+    }
+
     return Row(
       children: [
-        Expanded(child: _SquadTeamCard(team: data.teamA)),
-        const SizedBox(width: 16),
-        Expanded(child: _SquadTeamCard(team: data.teamB)),
+        if (hasTeamA) Expanded(child: _SquadTeamCard(team: data.teamA)),
+        if (hasTeamA && hasTeamB) const SizedBox(width: 16),
+        if (hasTeamB) Expanded(child: _SquadTeamCard(team: data.teamB)),
       ],
     );
   }
@@ -643,9 +648,7 @@ class _SquadTeamCard extends StatelessWidget {
   }
 }
 
-/// Stats Tab — built entirely from real scalar fields on the model:
-/// duration, views, category, source type, premium/featured flags,
-/// and tags. No fabricated batting/bowling numbers.
+/// Stats Tab — built entirely from real scalar fields on the model
 class _StatsTab extends StatelessWidget {
   final HighLightDetailModel data;
   const _StatsTab({required this.data});
@@ -658,12 +661,15 @@ class _StatsTab extends StatelessWidget {
       if (data.views > 0) MapEntry('Views', '${data.views}'),
       if (data.category.isNotEmpty) MapEntry('Category', data.category),
       if (data.sourceType.isNotEmpty) MapEntry('Source', data.sourceType),
-      MapEntry('Premium', data.isPremium ? 'Yes' : 'No'),
-      MapEntry('Featured', data.isFeatured ? 'Yes' : 'No'),
+      if (data.isPremium != null)
+        MapEntry('Premium', data.isPremium ? 'Yes' : 'No'),
+      if (data.isFeatured != null)
+        MapEntry('Featured', data.isFeatured ? 'Yes' : 'No'),
     ];
 
+    // Only show if there's real data
     if (items.isEmpty && data.tags.isEmpty) {
-      return const _NoDataFound();
+      return const _NoDataFound(title: 'Stats');
     }
 
     return Column(
@@ -672,42 +678,45 @@ class _StatsTab extends StatelessWidget {
         if (items.isNotEmpty)
           Column(
             children: items
-                .map((e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.white.withOpacity(0.1)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              e.key,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.6),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              e.value,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                .map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
                         ),
                       ),
-                    ))
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            e.key,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            e.value,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         if (data.tags.isNotEmpty) ...[
@@ -716,21 +725,25 @@ class _StatsTab extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: data.tags
-                .map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                .map(
+                  (tag) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      tag,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        tag,
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
-                      ),
-                    ))
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ],

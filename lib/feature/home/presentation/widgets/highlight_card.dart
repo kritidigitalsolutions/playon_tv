@@ -24,7 +24,7 @@ class HighlightCard extends StatelessWidget {
     return Container(
       width: 320, // ← wider (was 220)
       height: 150, // ← shorter card overall
-      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(4),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(

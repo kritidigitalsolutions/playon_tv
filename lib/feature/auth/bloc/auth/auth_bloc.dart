@@ -15,40 +15,46 @@ part 'auth_bloc.freezed.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginTvUsecase _loginTvUsecase;
   final FetchUserUsecase _fetchUserUsecase;
-  
+
   AuthBloc({
     required LoginTvUsecase loginTvUsecase,
     required FetchUserUsecase fetchUserUsecase,
   }) : _loginTvUsecase = loginTvUsecase,
-   _fetchUserUsecase = fetchUserUsecase,
-   super(AuthState()) {
+       _fetchUserUsecase = fetchUserUsecase,
+       super(AuthState()) {
     on<_Otp>((event, emit) {
       emit(state.copyWith(otp: event.value));
     });
     on<_LoginTv>((event, emit) async {
       emit(state.copyWith(loginStatus: Status.loading));
-      final result=await _loginTvUsecase(code: state.otp,deviceName: state.devicename);
-      if(result){
+      final result = await _loginTvUsecase(
+        code: state.otp,
+        deviceName: state.devicename,
+      );
+      if (result) {
         emit(state.copyWith(loginStatus: Status.success));
         debugPrint("login tv success");
         debugPrint(state.devicename);
         add(_FetchUser());
         emit(state.copyWith(otp: ""));
-      }else{
+        emit(state.copyWith(loginStatus: Status.init));
+      } else {
         emit(state.copyWith(loginStatus: Status.error));
+        emit(state.copyWith(loginStatus: Status.init));
       }
     });
-  on<_DeviceName>((event, emit) => emit(state.copyWith(devicename: event.value)),);
-    
+    on<_DeviceName>(
+      (event, emit) => emit(state.copyWith(devicename: event.value)),
+    );
+
     on<_FetchUser>((event, emit) async {
       emit(state.copyWith(fetchStatus: Status.loading));
-      final UserModel? user=await _fetchUserUsecase();
-      if(user!=null){
+      final UserModel? user = await _fetchUserUsecase();
+      if (user != null) {
         emit(state.copyWith(user: user, fetchStatus: Status.success));
-      }
-      else{
+      } else {
         emit(state.copyWith(fetchStatus: Status.error));
       }
-    },);
+    });
   }
 }

@@ -23,8 +23,8 @@ class ReelHighlightCard extends StatelessWidget {
     if (highlight == null) {
       return Container(
         width: 200,
-        height: 260,
-        margin: const EdgeInsets.only(right: 14),
+        
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.grey[800],
           borderRadius: BorderRadius.circular(16),
@@ -50,53 +50,66 @@ class ReelHighlightCard extends StatelessWidget {
 
     return Container(
       width: 200,
-      height: 260,
-      margin: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image
-            Image.network(
-              highlight.thumbnail,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[800],
-                  child: const Icon(
-                    Icons.broken_image,
-                    color: Colors.white54,
-                    size: 40,
-                  ),
-                );
-              },
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  color: Colors.grey[800],
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
+            // Background image - using Positioned.fill for better fit
+            Positioned.fill(
+              child: Image.network(
+                highlight.thumbnail,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[800],
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: Colors.white54,
+                      size: 40,
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: Colors.grey[800],
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
 
-            // Gradient overlay
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.55),
-                    Colors.transparent,
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.85),
-                  ],
-                  stops: const [0.0, 0.3, 0.55, 1.0],
+            // Gradient overlay - using Positioned.fill for consistent sizing
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.55),
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.85),
+                    ],
+                    stops: const [0.0, 0.3, 0.55, 1.0],
+                  ),
                 ),
               ),
             ),
@@ -275,6 +288,7 @@ class ReelHighlightCard extends StatelessWidget {
           ],
         ),
       ),
+      
     );
   }
 }

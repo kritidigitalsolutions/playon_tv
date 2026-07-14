@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
+import 'package:playon/core/widgets/app_dilog.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_text_field.dart';
 import 'package:playon/feature/home/presentation/widgets/sports_view.dart';
@@ -56,35 +58,45 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: BackgroundWithOneLight(
-        child: FocusTraversalGroup(
-          policy: OrderedTraversalPolicy(),
-          child: Column(
-            children: [
-              _buildTopBar(controller: searchController),
-              Expanded(
-                child: Column(
-                  children: [
-                    AppTabBar(
-                      tabs: tabs,
-                      selectedIndex: selectedIndex,
-                      onChanged: (index) {
-                        setState(() {
-                          selectedIndex = index;
-                        });
-                      },
-                    ),
-                    Expanded(
-                      child: SportsView(
-                        sportFilter: _getSportFilter(selectedIndex),
+    return PopScope(
+      canPop: false, // intercept every pop attempt on this screen
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await showExitConfirmationDialog(context);
+        if (shouldExit == true) {
+          SystemNavigator.pop(); // closes the app
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: BackgroundWithOneLight(
+          child: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: Column(
+              children: [
+                _buildTopBar(controller: searchController),
+                Expanded(
+                  child: Column(
+                    children: [
+                      AppTabBar(
+                        tabs: tabs,
+                        selectedIndex: selectedIndex,
+                        onChanged: (index) {
+                          setState(() {
+                            selectedIndex = index;
+                          });
+                        },
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: SportsView(
+                          sportFilter: _getSportFilter(selectedIndex),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
