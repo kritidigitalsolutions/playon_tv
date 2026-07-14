@@ -164,7 +164,7 @@ class _StarPlayerVideoPageTvState extends State<StarPlayerVideoPageTv> {
                                   isPremium: highlight.highlight.isPremium,
                                   onViewProfile: () {
                                     context.push(
-                                      '/player/${highlight.highlight.id}',
+                                      '/playerDetail/${Uri.encodeComponent(highlight.highlight.playerName)}',
                                     );
                                   },
                                 ),

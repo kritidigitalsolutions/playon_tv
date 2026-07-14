@@ -10,7 +10,9 @@ Future<void> _authDependency() async {
   //Series Datasource
   final seriesDatasource = SeriesDatasource();
   getIt.registerLazySingleton<SeriesDatasource>(() => seriesDatasource);
-
+  //Podcast Datasource
+  final podcastDatasource = PodcastDatasource();
+  getIt.registerLazySingleton<PodcastDatasource>(() => podcastDatasource);
   //Highlight Datasource
   final highlightDatasource = HighLightDatasource();
   getIt.registerLazySingleton<HighLightDatasource>(() => highlightDatasource);
@@ -100,4 +102,22 @@ Future<void> _authDependency() async {
     homeDatasource: getIt<HomeDatasource>(),
   );
   getIt.registerLazySingleton<StarPlayerDetailUseCase>(() => starPlayerDetailUsecase);
+
+  //All Podcast
+  final allPodcastUsecase = AllPodcastUsecase(
+    podcastDatasource: getIt<PodcastDatasource>(),
+  );
+  getIt.registerLazySingleton<AllPodcastUsecase>(() => allPodcastUsecase);
+
+  //Podcast Detail
+  final podcastDetailUsecase = DetailPodcastUsecase(
+    podcastDatasource: getIt<PodcastDatasource>(),
+  );
+  getIt.registerLazySingleton<DetailPodcastUsecase>(() => podcastDetailUsecase);
+
+  //Search Player UseCase
+  final searchPlayerUsecase = SearchPlayerUseCase(
+    homeDatasource: getIt<HomeDatasource>(),
+  );
+  getIt.registerLazySingleton<SearchPlayerUseCase>(() => searchPlayerUsecase);
 }

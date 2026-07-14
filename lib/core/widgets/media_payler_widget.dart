@@ -27,6 +27,8 @@ class MediaPlayerWidget extends StatefulWidget {
     required this.isFullscreen,
     required this.onFullscreenChanged,
     this.isBack = true,
+    this.showFullscreenButton =
+        true, // NEW — hide just the fullscreen icon on a given page
   });
 
   final String url;
@@ -37,6 +39,7 @@ class MediaPlayerWidget extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
+  final bool showFullscreenButton; // NEW
   final String? title;
   final void Function(String message)? onError;
   final void Function(
@@ -66,6 +69,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         onFullscreenChanged: widget.onFullscreenChanged,
         onError: widget.onError,
         onControllerReady: widget.onControllerReady,
+        showFullscreenButton: widget.showFullscreenButton, // NEW
       );
     }
 
@@ -80,6 +84,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       onFullscreenChanged: widget.onFullscreenChanged,
       onError: widget.onError,
       onControllerReady: widget.onControllerReady,
+      showFullscreenButton: widget.showFullscreenButton, // NEW
     );
   }
 }
@@ -100,6 +105,7 @@ class _YoutubeResolvingPlayer extends StatefulWidget {
     this.title,
     this.onError,
     this.onControllerReady,
+    this.showFullscreenButton = true, // NEW
   });
 
   final String url;
@@ -109,6 +115,7 @@ class _YoutubeResolvingPlayer extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
+  final bool showFullscreenButton; // NEW
   final String? title;
   final void Function(String message)? onError;
   final void Function(
@@ -212,6 +219,7 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
       onFullscreenChanged: widget.onFullscreenChanged,
       onError: widget.onError,
       onControllerReady: widget.onControllerReady,
+      showFullscreenButton: widget.showFullscreenButton, // NEW
     );
   }
 }
@@ -234,6 +242,7 @@ class _NativeMediaPlayer extends StatefulWidget {
     this.title,
     this.onError,
     this.onControllerReady,
+    this.showFullscreenButton = true, // NEW
   });
 
   final String url;
@@ -243,6 +252,7 @@ class _NativeMediaPlayer extends StatefulWidget {
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
   final bool isBack;
+  final bool showFullscreenButton; // NEW
   final String? title;
   final void Function(String message)? onError;
   final void Function(
@@ -343,6 +353,7 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
                 isFullscreen: widget.isFullscreen,
                 onFullscreenChanged: widget.onFullscreenChanged,
                 title: widget.isBack ? widget.title : null,
+                showFullscreenButton: widget.showFullscreenButton, // NEW
               )
             : const SizedBox.shrink(),
       );
@@ -419,10 +430,7 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
 
     if (_isLoading || _chewieController == null) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 3,
-        ),
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
       );
     }
 

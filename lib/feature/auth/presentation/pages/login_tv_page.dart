@@ -4,12 +4,12 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_button.dart';
+import 'package:playon/core/widgets/app_snack_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/feature/auth/bloc/auth/auth_bloc.dart';
 import 'package:playon/static/app_color.dart';
@@ -28,23 +28,39 @@ class _LoginTvPageState extends State<LoginTvPage> {
 
   final otpController = TextEditingController();
 
-  final _pinKeyFocusNode = FocusNode(debugLabel: 'pin-hardware-input');
+  // Focus node for the real (invisible) text field that the PIN dots
+  // sit on top of. Requesting focus on this is what brings up the
+  // platform's own system keyboard on Android TV — no custom on-screen
+  // keypad needed.
+  final _pinFieldFocusNode = FocusNode(debugLabel: 'pin-text-field');
 
   final _submitFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    // Fetch and dispatch the device name once the first frame is up.
+    // Repaint the focus ring on the PIN boxes whenever the underlying
+    // field's focus state changes.
+    _pinFieldFocusNode.addListener(_onPinFieldFocusChange);
+
+    // Fetch and dispatch the device name once the first frame is up,
+    // and send initial focus to the PIN field so the system keyboard
+    // is ready to go as soon as the page loads.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDeviceName();
+      _pinFieldFocusNode.requestFocus();
     });
+  }
+
+  void _onPinFieldFocusChange() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     otpController.dispose();
-    _pinKeyFocusNode.dispose();
+    _pinFieldFocusNode.removeListener(_onPinFieldFocusChange);
+    _pinFieldFocusNode.dispose();
     _submitFocusNode.dispose();
     super.dispose();
   }
@@ -70,69 +86,34 @@ class _LoginTvPageState extends State<LoginTvPage> {
     }
   }
 
-  KeyEventResult _handlePinKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+  /// Single source of truth for PIN input, fed by the real TextField's
+  /// onChanged below — works identically whether the digits came from
+  /// Android TV's system keyboard overlay, a connected Bluetooth
+  /// keyboard, or a remote with a numeric keypad.
+  void _onPinChanged(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    final trimmed = digitsOnly.length > _pinLength
+        ? digitsOnly.substring(0, _pinLength)
+        : digitsOnly;
 
-    final key = event.logicalKey;
-
-    // Backspace / Delete removes the last digit.
-    if (key == LogicalKeyboardKey.backspace ||
-        key == LogicalKeyboardKey.delete) {
-      if (otpController.text.isNotEmpty) {
-        setState(() {
-          otpController.text = otpController.text.substring(
-            0,
-            otpController.text.length - 1,
-          );
-        });
-        // Update the bloc with the new value
-        context.read<AuthBloc>().add(AuthEvent.otp(otpController.text));
-      }
-      return KeyEventResult.handled;
+    if (trimmed != value) {
+      // Keep the field's own text in sync if we stripped non-digits
+      // or truncated past the max length.
+      otpController.value = TextEditingValue(
+        text: trimmed,
+        selection: TextSelection.collapsed(offset: trimmed.length),
+      );
     }
 
-    final digit = _digitFor(key);
-    if (digit != null && otpController.text.length < _pinLength) {
-      setState(() {
-        otpController.text += digit;
-      });
-      // Update the bloc with the new value
-      context.read<AuthBloc>().add(AuthEvent.otp(otpController.text));
+    context.read<AuthBloc>().add(AuthEvent.otp(trimmed));
 
-      if (otpController.text.length == _pinLength) {
-        debugPrint('PIN entered: ${otpController.text}');
-        _submitFocusNode.requestFocus();
-      }
-      return KeyEventResult.handled;
+    if (trimmed.length == _pinLength) {
+      debugPrint('PIN entered: $trimmed');
+      _submitFocusNode.requestFocus();
     }
 
-    return KeyEventResult.ignored;
+    setState(() {}); // refresh PIN dots
   }
-
-  static final Map<LogicalKeyboardKey, String> _digitKeyMap = {
-    LogicalKeyboardKey.digit0: '0',
-    LogicalKeyboardKey.digit1: '1',
-    LogicalKeyboardKey.digit2: '2',
-    LogicalKeyboardKey.digit3: '3',
-    LogicalKeyboardKey.digit4: '4',
-    LogicalKeyboardKey.digit5: '5',
-    LogicalKeyboardKey.digit6: '6',
-    LogicalKeyboardKey.digit7: '7',
-    LogicalKeyboardKey.digit8: '8',
-    LogicalKeyboardKey.digit9: '9',
-    LogicalKeyboardKey.numpad0: '0',
-    LogicalKeyboardKey.numpad1: '1',
-    LogicalKeyboardKey.numpad2: '2',
-    LogicalKeyboardKey.numpad3: '3',
-    LogicalKeyboardKey.numpad4: '4',
-    LogicalKeyboardKey.numpad5: '5',
-    LogicalKeyboardKey.numpad6: '6',
-    LogicalKeyboardKey.numpad7: '7',
-    LogicalKeyboardKey.numpad8: '8',
-    LogicalKeyboardKey.numpad9: '9',
-  };
-
-  String? _digitFor(KeyboardKey key) => _digitKeyMap[key];
 
   void _submit() {
     if (otpController.text.length == _pinLength) {
@@ -142,11 +123,14 @@ class _LoginTvPageState extends State<LoginTvPage> {
 
   // Helper to build PIN indicator dots for TV
   Widget _buildPinDisplay() {
+    final hasFieldFocus = _pinFieldFocusNode.hasFocus;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(_pinLength, (index) {
         final bool isFilled = index < otpController.text.length;
         final bool isFocused =
+            hasFieldFocus &&
             index == otpController.text.length &&
             otpController.text.length < _pinLength;
 
@@ -192,6 +176,41 @@ class _LoginTvPageState extends State<LoginTvPage> {
     );
   }
 
+  /// PIN entry control: the dot display renders on top, and underneath
+  /// it sits a real (invisible) TextField. Tapping/selecting this area
+  /// focuses that field, which is what triggers Android TV's own
+  /// system keyboard overlay — no custom keypad UI is drawn by us.
+  Widget _buildPinInput() {
+    return SizedBox(
+      width: _pinLength * 76 + (_pinLength - 1) * 12,
+      height: 88,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          _buildPinDisplay(),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0,
+              child: TextField(
+                focusNode: _pinFieldFocusNode,
+                controller: otpController,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                maxLength: _pinLength,
+                onChanged: _onPinChanged,
+                showCursor: false,
+                decoration: const InputDecoration(
+                  counterText: '',
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -202,6 +221,9 @@ class _LoginTvPageState extends State<LoginTvPage> {
       listener: (context, state) {
         if (state.loginStatus == Status.success) {
           AppNavigation.pushReplacement(context, "/");
+          AppSnackbar.success(context, 'login success');
+        } else if (state.loginStatus == Status.error) {
+          AppSnackbar.error(context, 'incorrect code');
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -237,57 +259,57 @@ class _LoginTvPageState extends State<LoginTvPage> {
                       const SizedBox(width: 48),
                       Expanded(
                         flex: 6,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Activate on TV", style: text24()),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Stream on your Big Screen",
-                              style: text17(color: AppColors.grey500),
-                            ),
-                            const SizedBox(height: 28),
-                            Text(
-                              "Enjoy every match on your TV with a\nquick and easy setup",
-                              style: text17(color: AppColors.grey500),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Open the app on your TV and enter\nthe code shown to connect",
-                              style: text17(),
-                            ),
-                            const SizedBox(height: 24),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Activate on TV", style: text24()),
+                              const SizedBox(height: 12),
+                              Text(
+                                "Stream on your Big Screen",
+                                style: text17(color: AppColors.grey500),
+                              ),
+                              const SizedBox(height: 28),
+                              Text(
+                                "Enjoy every match on your TV with a\nquick and easy setup",
+                                style: text17(color: AppColors.grey500),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                "Open the app on your TV and enter\nthe code shown to connect",
+                                style: text17(),
+                              ),
+                              const SizedBox(height: 24),
 
-                            // Custom PIN input for TV with hardware keyboard support
-                            Focus(
-                              focusNode: _pinKeyFocusNode,
-                              autofocus: true,
-                              onKeyEvent: _handlePinKey,
-                              child: _buildPinDisplay(),
-                            ),
+                              // PIN dots + underlying real TextField.
+                              // Selecting/focusing this brings up the
+                              // system keyboard — no custom keypad.
+                              _buildPinInput(),
 
-                            const SizedBox(height: 8),
-                            Text(
-                              "Use number keys on your remote to enter the code",
-                              style: text14(color: AppColors.grey500),
-                            ),
-                            const SizedBox(height: 32),
-                            SizedBox(
-                              height: 56,
-                              width: 220,
-                              child: TvFocusable(
-                                focusNode: _submitFocusNode,
-                                borderRadius: BorderRadius.circular(10),
-                                onSelect: _submit,
-                                child: AppButton(
-                                  radius: 10,
-                                  title: "Submit your code",
-                                  onTap: _submit,
+                              const SizedBox(height: 8),
+                              Text(
+                                "Select the code field and use your TV's keyboard to enter the digits",
+                                style: text14(color: AppColors.grey500),
+                              ),
+                              const SizedBox(height: 32),
+                              SizedBox(
+                                height: 56,
+                                width: 220,
+                                child: TvFocusable(
+                                  focusNode: _submitFocusNode,
+                                  borderRadius: BorderRadius.circular(10),
+                                  onSelect: _submit,
+                                  child: AppButton(
+                                    radius: 10,
+                                    title: "Submit your code",
+                                    onTap: _submit,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],

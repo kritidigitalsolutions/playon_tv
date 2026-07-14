@@ -5,6 +5,7 @@ import 'package:playon/feature/highlights/presentation/pages/highlight_tornament
 import 'package:playon/feature/highlights/presentation/pages/highlights.dart';
 import 'package:playon/feature/home/presentation/page/home_page.dart';
 import 'package:playon/feature/home/presentation/page/match_video_page.dart';
+import 'package:playon/feature/home/presentation/page/player_detail_page.dart';
 import 'package:playon/feature/home/presentation/page/star_player_video_page.dart';
 import 'package:playon/feature/live_tv/presentation/pages/live_channel_datail_page.dart';
 import 'package:playon/feature/live_tv/presentation/pages/live_tv.dart';
@@ -57,7 +58,7 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/podcast/:id',
       builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '0') ?? 0;
+        final id = state.pathParameters['id'] ?? '';
         return PodcastPage(id: id);
       },
     ),
@@ -102,6 +103,13 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
         return StarPlayerVideoPageTv(id: id); // ✅ correct page
+      },
+    ),
+    GoRoute(
+      path: '/playerDetail/:search',
+      builder: (context, state) {
+        final search = state.pathParameters['search'] ?? '';
+        return PlayerDetailPage(search: search);
       },
     ),
   ],

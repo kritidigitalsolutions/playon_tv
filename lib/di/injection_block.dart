@@ -33,5 +33,10 @@ class InjectionBlock {
   static StarPayerCubit get starPayerCubit => StarPayerCubit(
     allStarPlayerUseCase: getIt<AllStarPlayerUseCase>(),
     starPlayerDetailUseCase: getIt<StarPlayerDetailUseCase>(),
+    searchPlayerUseCase: getIt<SearchPlayerUseCase>(),
+  );
+  static PodcastBloc get podcastBloc => PodcastBloc(
+    allPodcastUsecase: getIt<AllPodcastUsecase>(),
+    detailPodcastUsecase: getIt<DetailPodcastUsecase>(),
   );
 }

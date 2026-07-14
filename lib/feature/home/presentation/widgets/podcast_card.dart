@@ -33,9 +33,8 @@ class PodcastCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // Background image
-                  Image.asset(image, fit: BoxFit.cover),
+                  Image.network(image, fit: BoxFit.cover),
 
-                  // Full black overlay layer across the whole image
                   Container(color: Colors.black.withOpacity(0.4)),
 
                   // Play button — bottom-right circular container

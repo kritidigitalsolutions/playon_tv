@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/models/response/star_player_model.dart';
 import 'package:playon/feature/home/bloc/star_player/star_payer_cubit.dart';
+import 'package:playon/feature/podcast/bloc/podcast/podcast_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:playon/core/models/response/series_detail_model.dart';
 import 'package:playon/core/models/response/series_model.dart';
@@ -37,6 +38,7 @@ class _SportsViewState extends State<SportsView> {
     context.read<SeriesBloc>().add(SeriesEvent.getSeriesList());
     context.read<HighlightBloc>().add(HighlightEvent.fetchHighLight());
     context.read<StarPayerCubit>().allStarPlayer();
+    context.read<PodcastBloc>().add(PodcastEvent.allPodcast());
     super.initState();
   }
 
@@ -95,37 +97,36 @@ class _SportsViewState extends State<SportsView> {
                     itemBuilder: (context, index) {
                       final banner = state.bannerAds[index];
 
-                      return TvFocusable(
-                        autofocus: index == 0,
-                        borderRadius: BorderRadius.circular(20),
-                        onSelect: () {
-                          if (banner.link.isNotEmpty) {
-                            // Open banner.link or navigate
-                          }
-                        },
-                        child: Container(
-                          width: MediaQuery.sizeOf(context).width * 0.85,
-                          margin: const EdgeInsets.only(right: 16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Image.network(
-                            banner.image,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, progress) {
-                              if (progress == null) return child;
-                              return const _ShimmerBox(
-                                width: double.infinity,
-                                height: double.infinity,
-                                borderRadius: BorderRadius.zero,
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(Icons.broken_image, size: 40),
-                              );
-                            },
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _GlowFocusCard(
+                          autofocus: index == 0,
+                          borderRadius: BorderRadius.circular(20),
+                          onSelect: () {
+                            if (banner.link.isNotEmpty) {
+                              // Open banner.link or navigate
+                            }
+                          },
+                          child: SizedBox(
+                            width: MediaQuery.sizeOf(context).width * 0.85,
+                            height: double.infinity,
+                            child: Image.network(
+                              banner.image,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return const _ShimmerBox(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  borderRadius: BorderRadius.zero,
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(Icons.broken_image, size: 40),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       );
@@ -220,19 +221,19 @@ class _SportsViewState extends State<SportsView> {
                         itemBuilder: (context, index) {
                           final series = trending[index];
 
-                          return TvFocusable(
-                            autofocus: index == 0,
-                            onSelect: () {
-                              AppNavigation.push(
-                                context,
-                                "/trending/${series.id}",
-                              );
-                            },
-                            child: Container(
-                              width: 220,
-                              margin: const EdgeInsets.only(right: 16),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: _GlowFocusCard(
+                              autofocus: index == 0,
+                              borderRadius: BorderRadius.circular(16),
+                              onSelect: () {
+                                AppNavigation.push(
+                                  context,
+                                  "/trending/${series.id}",
+                                );
+                              },
+                              child: SizedBox(
+                                width: 220,
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -489,26 +490,30 @@ class _SportsViewState extends State<SportsView> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final item = filtered[index];
-                    return TvFocusable(
-                      autofocus: index == 0,
-                      onSelect: () {
-                        AppNavigation.push(
-                          context,
-                          "/highlightMatch/${item.id}",
-                        );
-                      },
-                      child: HighlightCard(
-                        image: item.thumbnail,
-                        logo: item.series.tournamentLogo.isNotEmpty
-                            ? item.series.tournamentLogo
-                            : AppImage.logo,
-                        tournamentName: item.series.title,
-                        teamA: item.teamA.shortName.isNotEmpty
-                            ? item.teamA.shortName
-                            : item.teamA.name,
-                        teamB: item.teamB.shortName.isNotEmpty
-                            ? item.teamB.shortName
-                            : item.teamB.name,
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: _GlowFocusCard(
+                        autofocus: index == 0,
+                        borderRadius: BorderRadius.circular(16),
+                        onSelect: () {
+                          AppNavigation.push(
+                            context,
+                            "/highlightMatch/${item.id}",
+                          );
+                        },
+                        child: HighlightCard(
+                          image: item.thumbnail,
+                          logo: item.series.tournamentLogo.isNotEmpty
+                              ? item.series.tournamentLogo
+                              : AppImage.logo,
+                          tournamentName: item.series.title,
+                          teamA: item.teamA.shortName.isNotEmpty
+                              ? item.teamA.shortName
+                              : item.teamA.name,
+                          teamB: item.teamB.shortName.isNotEmpty
+                              ? item.teamB.shortName
+                              : item.teamB.name,
+                        ),
                       ),
                     );
                   },
@@ -601,19 +606,23 @@ class _SportsViewState extends State<SportsView> {
                   itemCount: filteredHighlights.length,
                   itemBuilder: (context, index) {
                     final highlight = filteredHighlights[index];
-                    return TvFocusable(
-                      autofocus: index == 0,
-                      onSelect: () {
-                        AppNavigation.push(
-                          context,
-                          "starPlayerVideo/${highlight.id}",
-                        );
-                      },
-                      child: ReelHighlightCard(
-                        starPlayerResponse: StarPlayerResponse(
-                          success: true,
-                          count: 1,
-                          highlights: [highlight],
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: _GlowFocusCard(
+                        autofocus: index == 0,
+                        borderRadius: BorderRadius.circular(16),
+                        onSelect: () {
+                          AppNavigation.push(
+                            context,
+                            "starPlayerVideo/${highlight.id}",
+                          );
+                        },
+                        child: ReelHighlightCard(
+                          starPlayerResponse: StarPlayerResponse(
+                            success: true,
+                            count: 1,
+                            highlights: [highlight],
+                          ),
                         ),
                       ),
                     );
@@ -628,100 +637,210 @@ class _SportsViewState extends State<SportsView> {
   }
 
   Widget _buildPodcastsSection(BuildContext context, {String? sport}) {
-    // TODO: Replace with real data from API filtered by sport
-    final podcasts = _getPodcasts(sport);
+    return BlocBuilder<PodcastBloc, PodcastState>(
+      builder: (context, state) {
+        final podcasts = state.podcastResponse?.podcasts ?? [];
 
-    if (podcasts.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Text(
-                sport == null || sport == 'HOME'
-                    ? "Latest Podcasts"
-                    : "$sport Podcasts",
-                style: text24(),
-              ),
-              const Spacer(),
-              TvFocusable(
-                onSelect: () {
-                  AppNavigation.push(context, "/podcasts");
-                },
-                child: Text("Explore", style: text18(color: AppColors.primary)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 290,
-          child: FocusTraversalGroup(
-            policy: WidgetOrderTraversalPolicy(),
+        // Loading state (only show shimmer if we have nothing yet)
+        if (state.allPodcastStatus == Status.loading && podcasts.isEmpty) {
+          return SizedBox(
+            height: 290,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: podcasts.length,
-              itemBuilder: (context, index) {
-                final item = podcasts[index];
-                return TvFocusable(
-                  onSelect: () {
-                    AppNavigation.push(context, "/podcast/$index");
-                  },
-                  child: PodcastCard(
-                    image: item['image']!,
-                    title: item['title']!,
-                    duration: item['duration']!,
-                  ),
-                );
-              },
+              itemCount: 4,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: _ShimmerBox(
+                  width: 220,
+                  height: 290,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          );
+        }
+
+        // Error state
+        if (state.allPodcastStatus == Status.error && podcasts.isEmpty) {
+          return SizedBox(
+            height: 290,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Something went wrong",
+                    style: text17(color: AppColors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      context.read<PodcastBloc>().add(
+                        PodcastEvent.allPodcast(),
+                      );
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Filter by active sport tab
+        final filtered = (sport == null || sport == 'HOME')
+            ? podcasts
+            : podcasts
+                  .where((p) => p.sportId?.name.toUpperCase() == sport)
+                  .toList();
+
+        if (filtered.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Text(
+                    sport == null || sport == 'HOME'
+                        ? "Latest Podcasts"
+                        : "$sport Podcasts",
+                    style: text24(),
+                  ),
+                  const Spacer(),
+                  TvFocusable(
+                    onSelect: () {
+                      AppNavigation.push(context, "/podcasts");
+                    },
+                    child: Text(
+                      "Explore",
+                      style: text18(color: AppColors.primary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 290,
+              child: FocusTraversalGroup(
+                policy: WidgetOrderTraversalPolicy(),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: _GlowFocusCard(
+                        autofocus: index == 0,
+                        borderRadius: BorderRadius.circular(16),
+                        onSelect: () {
+                          AppNavigation.push(context, "/podcast/${item.id}");
+                        },
+                        child: PodcastCard(
+                          image: item.thumbnail,
+                          title: item.title,
+                          duration: item.duration,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
+}
 
-  // Mock data - replace with real API calls once the backend exposes a
-  // podcasts endpoint. (Highlights and Star Players are already wired to
-  // their real APIs above.)
-  List<Map<String, String>> _getPodcasts(String? sport) {
-    final allPodcasts = [
-      {
-        "image": AppImage.background,
-        "title": "Match day breakdown",
-        "duration": "24 min",
-        "sport": "CRICKET",
-      },
-      {
-        "image": AppImage.background,
-        "title": "Behind the scenes",
-        "duration": "18 min",
-        "sport": "FOOTBALL",
-      },
-      {
-        "image": AppImage.background,
-        "title": "Player interview special",
-        "duration": "32 min",
-        "sport": "HOCKEY",
-      },
-      {
-        "image": AppImage.background,
-        "title": "Cricket analysis",
-        "duration": "28 min",
-        "sport": "CRICKET",
-      },
-    ];
+/// Wraps any child with the same focus-glow treatment as SeriesCard
+/// (from HighlightsView): a Container whose border/boxShadow change
+/// color+intensity on focus. No flat background tint, no scale — just
+/// glow. TvFocusable supplies the FocusNode + D-pad/Select handling;
+/// this widget owns the visual look.
+class _GlowFocusCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onSelect;
+  final bool autofocus;
+  final BorderRadius borderRadius;
 
-    if (sport == null || sport == 'HOME') {
-      return allPodcasts;
-    }
+  const _GlowFocusCard({
+    required this.child,
+    this.onSelect,
+    this.autofocus = false,
+    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
+  });
 
-    return allPodcasts.where((item) => item['sport'] == sport).toList();
+  @override
+  State<_GlowFocusCard> createState() => _GlowFocusCardState();
+}
+
+class _GlowFocusCardState extends State<_GlowFocusCard> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!mounted) return;
+    setState(() => _isFocused = _focusNode.hasFocus);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TvFocusable(
+      focusNode: _focusNode,
+      autofocus: widget.autofocus,
+      borderRadius: widget.borderRadius,
+      // No flat tint — the Container glow below is the only focus
+      // indicator, same as SeriesCard/SeriesCards.
+      focusBackgroundColor: Colors.transparent,
+      onSelect: widget.onSelect,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: widget.borderRadius,
+          border: Border.all(
+            color: _isFocused
+                ? AppColors.primary
+                : AppColors.primary.withOpacity(0.3),
+            width: _isFocused ? 3 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isFocused
+                  ? AppColors.primary.withOpacity(0.5)
+                  : Colors.black.withOpacity(0.3),
+              blurRadius: _isFocused ? 22 : 8,
+              spreadRadius: _isFocused ? 2 : 0,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: widget.borderRadius,
+          child: widget.child,
+        ),
+      ),
+    );
   }
 }
 
@@ -887,12 +1006,19 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
                     itemCount: matches.length,
                     itemBuilder: (context, index) {
                       final match = matches[index];
-                      return TvFocusable(
-                        autofocus: index == 0,
-                        onSelect: () {
-                          AppNavigation.push(context, "matchVideo/${match.id}");
-                        },
-                        child: _MatchCard(match: match),
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _GlowFocusCard(
+                          autofocus: index == 0,
+                          borderRadius: BorderRadius.circular(16),
+                          onSelect: () {
+                            AppNavigation.push(
+                              context,
+                              "matchVideo/${match.id}",
+                            );
+                          },
+                          child: _MatchCard(match: match),
+                        ),
                       );
                     },
                   ),
@@ -913,78 +1039,74 @@ class _MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 260,
-      margin: const EdgeInsets.only(right: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            match.thumbnail.isNotEmpty
-                ? Image.network(
-                    match.thumbnail,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        AppImage.tornamentlogo,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  )
-                : Image.asset(AppImage.tornamentlogo, fit: BoxFit.cover),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.2),
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          match.thumbnail.isNotEmpty
+              ? Image.network(
+                  match.thumbnail,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.asset(
+                      AppImage.tornamentlogo,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                )
+              : Image.asset(AppImage.tornamentlogo, fit: BoxFit.cover),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.2),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.8),
+                ],
+                stops: const [0.0, 0.5, 1.0],
               ),
             ),
-            if (match.status.isNotEmpty)
-              Positioned(
-                left: 12,
-                right: 12,
-                top: 12,
-                child: Text(
-                  match.status,
-                  style: text14(color: AppColors.primary),
-                ),
-              ),
+          ),
+          if (match.status.isNotEmpty)
             Positioned(
               left: 12,
               right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "${match.teamA} vs ${match.teamB}",
-                    style: text17(color: AppColors.white),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (match.venue.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      match.venue,
-                      style: text14(color: AppColors.white.withOpacity(0.7)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
+              top: 12,
+              child: Text(
+                match.status,
+                style: text14(color: AppColors.primary),
               ),
             ),
-          ],
-        ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "${match.teamA} vs ${match.teamB}",
+                  style: text17(color: AppColors.white),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (match.venue.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    match.venue,
+                    style: text14(color: AppColors.white.withOpacity(0.7)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

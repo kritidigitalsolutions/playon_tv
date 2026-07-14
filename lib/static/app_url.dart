@@ -39,4 +39,8 @@ class AppUrl {
   }
 
   static String allPodcast = "$baseUrl/api/podcasts";
+  static String podcastDetail({required String id}) {
+    return "$baseUrl/api/podcasts/$id";
+  }
+  static String searchPlayer({required String search}) => "$baseUrl/api/players?search=$search";
 }

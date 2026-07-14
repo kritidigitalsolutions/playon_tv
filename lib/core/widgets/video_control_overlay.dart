@@ -21,16 +21,17 @@ class VideoControlsOverlay extends StatefulWidget {
     this.title,
     required this.isFullscreen,
     required this.onFullscreenChanged,
+    this.showFullscreenButton = true, // NEW — lets a page hide just this button
   });
 
   final String? title;
   final bool isFullscreen;
   final ValueChanged<bool> onFullscreenChanged;
+  final bool showFullscreenButton; // NEW
 
   @override
   State<VideoControlsOverlay> createState() => _VideoControlsOverlayState();
 }
-
 class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
   bool _visible = true;
   Timer? _hideTimer;
@@ -464,41 +465,40 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  // Speed
-                                  _AccessoryItem(
-                                    focusNode: _speedFocusNode,
-                                    icon: Icons.speed_rounded,
-                                    label: _getSpeedLabel(),
-                                    onSelect: () =>
-                                        _openPanel(TVSettingsCategory.speed),
-                                  ),
-                                  const SizedBox(width: 28),
-                                  // Fullscreen
-                                  TvFocusable(
-                                    focusNode: _fullscreenFocusNode,
-                                    borderRadius: BorderRadius.circular(8),
-                                    onSelect: () {
-                                      widget.onFullscreenChanged(
-                                        !widget.isFullscreen,
-                                      );
-                                      _keepAlive();
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Icon(
-                                        widget.isFullscreen
-                                            ? Icons.fullscreen_exit_rounded
-                                            : Icons.fullscreen_rounded,
-                                        color: Colors.white,
-                                        size: 26,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                             Row(
+  mainAxisAlignment: MainAxisAlignment.end,
+  children: [
+    // Speed
+    _AccessoryItem(
+      focusNode: _speedFocusNode,
+      icon: Icons.speed_rounded,
+      label: _getSpeedLabel(),
+      onSelect: () => _openPanel(TVSettingsCategory.speed),
+    ),
+    if (widget.showFullscreenButton) ...[
+      const SizedBox(width: 28),
+      // Fullscreen
+      TvFocusable(
+        focusNode: _fullscreenFocusNode,
+        borderRadius: BorderRadius.circular(8),
+        onSelect: () {
+          widget.onFullscreenChanged(!widget.isFullscreen);
+          _keepAlive();
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(
+            widget.isFullscreen
+                ? Icons.fullscreen_exit_rounded
+                : Icons.fullscreen_rounded,
+            color: Colors.white,
+            size: 26,
+          ),
+        ),
+      ),
+    ],
+  ],
+),
                               const SizedBox(height: 14),
                               // Progress bar
                               _TVProgressBar(

@@ -10,6 +10,7 @@ import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
+import 'package:playon/feature/highlights/bloc/highlight/highlight_bloc.dart';
 import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
@@ -276,10 +277,7 @@ class _TrendingDetailPageState extends State<TrendingDetailPage> {
                                     focusNode: _tabRootNodes[2],
                                     canRequestFocus: false,
                                     skipTraversal: true,
-                                    child: _HighlightsTab(
-                                      matches: matches,
-                                      seriesId: widget.id,
-                                    ),
+                                    child: _HighlightsTab(seriesId: widget.id),
                                   ),
                                   Focus(
                                     focusNode: _tabRootNodes[3],
@@ -727,275 +725,262 @@ class _UpcomingTab extends StatelessWidget {
   }
 }
 
-class _HighlightsTab extends StatelessWidget {
-  const _HighlightsTab({required this.matches, required this.seriesId});
-  final List<MatchModel> matches;
+class _HighlightsTab extends StatefulWidget {
+  const _HighlightsTab({required this.seriesId});
   final String seriesId;
 
   @override
+  State<_HighlightsTab> createState() => _HighlightsTabState();
+}
+
+class _HighlightsTabState extends State<_HighlightsTab> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<HighlightBloc>().add(HighlightEvent.fetchHighLight());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Filter matches that have actual highlights
-    // You can adjust this logic based on your data model
-    var highlights = matches
-        .where(
-          (m) =>
-              m.isFeatured ||
-              m.isTrending ||
-              (m.thumbnail.isNotEmpty && m.status.toLowerCase() == 'completed'),
-        )
-        .toList();
+    return BlocBuilder<HighlightBloc, HighlightState>(
+      builder: (context, state) {
+        // Loading (only show spinner if we have nothing yet)
+        if (state.allHighLightStatus == Status.loading &&
+            state.highlights.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    // If no featured/trending highlights, show all matches as highlights
-    if (highlights.isEmpty) highlights = matches;
+        // Error
+        if (state.allHighLightStatus == Status.error &&
+            state.highlights.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Something went wrong",
+                    style: text17(color: AppColors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      context.read<HighlightBloc>().add(
+                        HighlightEvent.fetchHighLight(),
+                      );
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
-    if (highlights.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            "No highlights yet",
-            style: text17(color: AppColors.white.withAlpha(150)),
-          ),
-        ),
-      );
-    }
+        // Only keep highlights whose series matches this series' id —
+        // fetches the whole list but filters down to this series only.
+        final filtered = state.highlights
+            .where((h) => h.series.id == widget.seriesId)
+            .toList();
 
-    return FocusTraversalGroup(
-      policy: ReadingOrderTraversalPolicy(),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: highlights.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
-          ),
-          itemBuilder: (context, index) {
-            final item = highlights[index];
+        if (filtered.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                "No highlights yet",
+                style: text17(color: AppColors.white.withAlpha(150)),
+              ),
+            ),
+          );
+        }
 
-            // Check if this is a "real" highlight (has thumbnail and is completed)
-            final isRealHighlight =
-                item.thumbnail.isNotEmpty &&
-                item.status.toLowerCase() == 'completed';
+        return FocusTraversalGroup(
+          policy: ReadingOrderTraversalPolicy(),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filtered.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
+              ),
+              itemBuilder: (context, index) {
+                final item = filtered[index];
 
-            return _FocusCard(
-              autofocus: index == 0,
-              borderRadius: 14,
-              onSelect: () {
-                // Navigate to match page
-                AppNavigation.push(context, "seriesMatch/${item.id}");
-              },
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.background.withAlpha(40),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Thumbnail with play button overlay
-                    Expanded(
-                      flex: 4,
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(14),
-                          topRight: Radius.circular(14),
-                        ),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Thumbnail image
-                            _NetworkOrAsset(
-                              url: item.thumbnail.isNotEmpty
-                                  ? item.thumbnail
-                                  : item.banner,
-                              fallbackAsset: AppImage.background,
-                            ),
-
-                            // Gradient overlay
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  stops: const [0.4, 1.0],
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.5),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Premium badge if applicable
-                            if (item.isPremium)
-                              Positioned(
-                                top: 8,
-                                left: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFF3B94D,
-                                    ).withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'PREMIUM',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Status badge
-                            if (item.status.isNotEmpty && !isRealHighlight)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.6),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    item.status.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Play button - only show for actual highlights
-                            if (isRealHighlight)
-                              const Center(
-                                child: Icon(
-                                  Icons.play_circle_filled,
-                                  color: Colors.white,
-                                  size: 48,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                return _FocusCard(
+                  autofocus: index == 0,
+                  borderRadius: 14,
+                  onSelect: () {
+                    AppNavigation.push(context, "/highlightMatch/${item.id}");
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.background.withAlpha(40),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-
-                    // Match info
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Teams
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Thumbnail with play button overlay
+                        Expanded(
+                          flex: 4,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(14),
+                              topRight: Radius.circular(14),
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                _NetworkOrAsset(
+                                  url: item.thumbnail,
+                                  fallbackAsset: AppImage.background,
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      stops: const [0.4, 1.0],
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.5),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (item.isPremium)
+                                  Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: kGold.withOpacity(0.9),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'PREMIUM',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                const Center(
+                                  child: Icon(
+                                    Icons.play_circle_filled,
+                                    color: Colors.white,
+                                    size: 48,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Match info
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  item.teamA,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      item.teamA.shortName.isNotEmpty
+                                          ? item.teamA.shortName
+                                          : item.teamA.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'VS',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      item.teamB.shortName.isNotEmpty
+                                          ? item.teamB.shortName
+                                          : item.teamB.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 6,
+                              const SizedBox(height: 4),
+                              Text(
+                                item.title,
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(150),
+                                  fontSize: 11,
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'VS',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  item.teamB,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-
-                          const SizedBox(height: 4),
-
-                          // Match title or sport
-                          Text(
-                            item.title.isNotEmpty ? item.title : item.sport,
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(150),
-                              fontSize: 11,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                          const SizedBox(height: 2),
-
-                          // Match date
-                          Text(
-                            _formatDate(item.matchDate),
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(80),
-                              fontSize: 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }

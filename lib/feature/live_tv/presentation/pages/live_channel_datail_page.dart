@@ -8,9 +8,6 @@ import 'package:playon/static/app_color.dart';
 
 class LiveChannelDatailPage extends StatefulWidget {
   const LiveChannelDatailPage({super.key, required this.slug});
-
-  /// This is the channel's `slug`, not its `_id` — the backend
-  /// route/bloc lookup for a live channel's stream is slug-based.
   final String slug;
 
   @override
@@ -123,6 +120,7 @@ class _LiveChannelDatailPageState extends State<LiveChannelDatailPage> {
                         width: double.infinity,
                         height: size.height * 0.45,
                         child: MediaPlayerWidget(
+                          showFullscreenButton: false,
                           url: streamUrl,
                           title: channel?.name ?? widget.slug,
                           isFullscreen: false,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/service/storage_service.dart';
+import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/feature/auth/bloc/auth/auth_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
@@ -31,8 +32,14 @@ class _CustomDrawerState extends State<CustomDrawer> {
   bool mouseHover = false;
   // Tracks which item indices currently hold remote/keyboard focus.
   final Set<int> _focusedIndices = {};
+  // Tracks focus on the footer (avatar/logout) row separately, since
+  // it isn't one of `widget.items` — without this, moving D-pad focus
+  // down onto the logout button collapsed the drawer and hid it and
+  // the username at the same time.
+  bool _footerFocused = false;
 
-  bool get expanded => mouseHover || _focusedIndices.isNotEmpty;
+  bool get expanded =>
+      mouseHover || _focusedIndices.isNotEmpty || _footerFocused;
 
   void _setItemFocused(int index, bool isFocused) {
     setState(() {
@@ -42,6 +49,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
         _focusedIndices.remove(index);
       }
     });
+  }
+
+  void _setFooterFocused(bool isFocused) {
+    setState(() => _footerFocused = isFocused);
   }
 
   initState() {
@@ -78,7 +89,7 @@ class _CustomDrawerState extends State<CustomDrawer> {
         ),
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final user=state.user;
+            final user = state.user;
             return SafeArea(
               child: Column(
                 children: [
@@ -152,61 +163,14 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     ),
                   ),
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.white.withOpacity(0.08),
-                            border: Border.all(
-                              color: AppColors.white.withOpacity(0.15),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.person_rounded,
-                            color: AppColors.white.withOpacity(0.7),
-                            size: 20,
-                          ),
-                        ),
-                        if (expanded) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  user?.fullName??"Your account",
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: AppColors.white.withOpacity(0.7),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Spacer(),
-                                IconButton(
-                                  onPressed: (){
-                                    StorageService.logout();
-                                    AppNavigation.pushReplacement(context, "/loginTv");
-                                  },
-                                  icon: Icon(
-                                    Icons.logout,
-                                    color: AppColors.white.withOpacity(0.7),
-                                    size: 20,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  _FooterAccount(
+                    userName: user?.fullName ?? "Your account",
+                    expanded: expanded,
+                    onFocusChanged: _setFooterFocused,
+                    onLogout: () {
+                      StorageService.logout();
+                      AppNavigation.pushReplacement(context, "/loginTv");
+                    },
                   ),
                 ],
               ),
@@ -222,6 +186,111 @@ class DrawerItemData {
   final IconData icon;
   final String label;
   const DrawerItemData({required this.icon, required this.label});
+}
+
+/// Avatar + username + logout row. Pulled out into its own widget so
+/// the logout button can hold a proper focus node and report its own
+/// focus state up to [_CustomDrawerState] — without this, D-pad focus
+/// reaching the logout button had no way to keep the drawer expanded.
+class _FooterAccount extends StatefulWidget {
+  const _FooterAccount({
+    required this.userName,
+    required this.expanded,
+    required this.onFocusChanged,
+    required this.onLogout,
+  });
+
+  final String userName;
+  final bool expanded;
+  final ValueChanged<bool> onFocusChanged;
+  final VoidCallback onLogout;
+
+  @override
+  State<_FooterAccount> createState() => _FooterAccountState();
+}
+
+class _FooterAccountState extends State<_FooterAccount> {
+  final FocusNode _logoutFocusNode = FocusNode(debugLabel: 'drawer-logout');
+
+  @override
+  void initState() {
+    super.initState();
+    _logoutFocusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    widget.onFocusChanged(_logoutFocusNode.hasFocus);
+  }
+
+  @override
+  void dispose() {
+    _logoutFocusNode.removeListener(_onFocusChange);
+    _logoutFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.white.withOpacity(0.08),
+              border: Border.all(color: AppColors.white.withOpacity(0.15)),
+            ),
+            child: Icon(
+              Icons.person_rounded,
+              color: AppColors.white.withOpacity(0.7),
+              size: 20,
+            ),
+          ),
+          if (widget.expanded) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.userName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.white.withOpacity(0.7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // TvFocusable instead of a bare IconButton — this is
+                  // what makes it reachable and activatable via D-pad
+                  // select, with the same focus-glow language used
+                  // everywhere else in the app.
+                  TvFocusable(
+                    focusNode: _logoutFocusNode,
+                    borderRadius: BorderRadius.circular(20),
+                    onSelect: widget.onLogout,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.logout,
+                        color: AppColors.white.withOpacity(0.7),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _DrawerItem extends StatefulWidget {
@@ -316,8 +385,6 @@ class _DrawerItemState extends State<_DrawerItem> {
                         ? AppColors.primary.withOpacity(0.14)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
-                    // Thin ring specifically for remote focus, distinct
-                    // from the selected/hover tint above.
                     border: Border.all(
                       color: focused
                           ? Colors.white.withOpacity(0.8)
