@@ -52,7 +52,7 @@ final GoRouter router = GoRouter(
       path: '/liveChannelDetail/:slug',
       builder: (context, state) {
         final slug = state.pathParameters['slug']!;
-        return LiveChannelDatailPage(slug: slug);
+        return LiveChannelDetailPage(slug: slug);
       },
     ),
     GoRoute(
@@ -102,7 +102,7 @@ final GoRouter router = GoRouter(
       path: '/starPlayerVideo/:id',
       builder: (context, state) {
         final id = state.pathParameters['id'] ?? '';
-        return StarPlayerVideoPageTv(id: id); // ✅ correct page
+        return StarPlayerVideoPageTv(id: id); 
       },
     ),
     GoRoute(

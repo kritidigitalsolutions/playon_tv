@@ -8,14 +8,13 @@ import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
+import 'package:playon/core/widgets/bottom_view.dart';
 import 'package:playon/core/widgets/media_payler_widget.dart';
 import 'package:playon/feature/series/bloc/match/match_bloc.dart';
 import 'package:playon/feature/series/bloc/series/series_bloc.dart';
 import 'package:playon/static/app_color.dart';
 import 'package:playon/static/app_image.dart';
 import 'package:playon/static/app_navigation.dart';
-
-
 
 class SeriesMatchPage extends StatefulWidget {
   const SeriesMatchPage({super.key, required this.id});
@@ -28,6 +27,9 @@ class SeriesMatchPage extends StatefulWidget {
 class _SeriesMatchPageState extends State<SeriesMatchPage> {
   bool _isFullscreen = false;
   int _selectedTabIndex = 0;
+  final FocusNode _bottomSentinelFocus = FocusNode(
+    debugLabel: 'bottomSentinel',
+  );
 
   final List<String> _tabs = [
     'Highlights',
@@ -51,10 +53,27 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
     super.initState();
     // Load match details from MatchBloc
     context.read<MatchBloc>().add(MatchEvent.matchDetail(id: widget.id));
+    _bottomSentinelFocus.addListener(_onBottomSentinelFocusChange);
+  }
+
+  void _onBottomSentinelFocusChange() {
+    if (_bottomSentinelFocus.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Scrollable.ensureVisible(
+          _bottomSentinelFocus.context ?? context,
+          alignment: 1.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      });
+    }
   }
 
   @override
   void dispose() {
+    _bottomSentinelFocus.removeListener(_onBottomSentinelFocusChange);
+    _bottomSentinelFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -140,6 +159,7 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
             titleCase: _titleCase,
             onFullscreenChanged: _handleFullscreenChanged,
             onTabChanged: (index) => setState(() => _selectedTabIndex = index),
+            bottomSentinelFocus: _bottomSentinelFocus,
           );
         },
       ),
@@ -159,6 +179,7 @@ class _MatchContent extends StatelessWidget {
     required this.titleCase,
     required this.onFullscreenChanged,
     required this.onTabChanged,
+    required this.bottomSentinelFocus,
   });
 
   final MatchModel match;
@@ -171,6 +192,7 @@ class _MatchContent extends StatelessWidget {
   final String Function(String value) titleCase;
   final ValueChanged<bool> onFullscreenChanged;
   final ValueChanged<int> onTabChanged;
+  final FocusNode bottomSentinelFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -179,8 +201,7 @@ class _MatchContent extends StatelessWidget {
         : '${match.teamA} vs ${match.teamB}';
 
     // Use the actual stream URL from the API, fallback to placeholder
-    final streamUrl = 
-         match.stream.streamUrl;
+    final streamUrl = match.stream.streamUrl;
 
     final player = MediaPlayerWidget(
       url: streamUrl,
@@ -436,6 +457,16 @@ class _MatchContent extends StatelessWidget {
                 // Tab Content
                 _buildTabContent(selectedTabIndex, match),
                 const SizedBox(height: 20),
+
+                // Bottom View - wrapped in Focus for TV navigation
+                Focus(
+                  focusNode: bottomSentinelFocus,
+                  skipTraversal: false,
+                  canRequestFocus: true,
+                  onKeyEvent: (node, event) => KeyEventResult.ignored,
+                  child: const BottomView(),
+                ),
+                const SizedBox(height: 30),
               ],
             ),
           ),

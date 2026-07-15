@@ -26,7 +26,7 @@ class PodcastCard extends StatelessWidget {
           // Image section — sized by aspect ratio, not a hardcoded height
           AspectRatio(
             aspectRatio:
-                0.75, // width / height — tweak to taste (e.g. 1 for square)
+                3/3.6, 
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: Stack(

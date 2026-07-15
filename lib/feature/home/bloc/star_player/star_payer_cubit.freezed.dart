@@ -25,12 +25,12 @@ $StarPayerStateCopyWith<StarPayerState> get copyWith => _$StarPayerStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus)&&const DeepCollectionEquality().equals(other.searchPlayers, searchPlayers)&&(identical(other.searchPlayerStatus, searchPlayerStatus) || other.searchPlayerStatus == searchPlayerStatus)&&(identical(other.search, search) || other.search == search));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus)&&(identical(other.searchPlayers, searchPlayers) || other.searchPlayers == searchPlayers)&&(identical(other.searchPlayerStatus, searchPlayerStatus) || other.searchPlayerStatus == searchPlayerStatus)&&(identical(other.search, search) || other.search == search));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus,const DeepCollectionEquality().hash(searchPlayers),searchPlayerStatus,search);
+int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus,searchPlayers,searchPlayerStatus,search);
 
 @override
 String toString() {
@@ -233,12 +233,12 @@ _$StarPayerStateCopyWith<_StarPayerState> get copyWith => __$StarPayerStateCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus)&&const DeepCollectionEquality().equals(other.searchPlayers, searchPlayers)&&(identical(other.searchPlayerStatus, searchPlayerStatus) || other.searchPlayerStatus == searchPlayerStatus)&&(identical(other.search, search) || other.search == search));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StarPayerState&&(identical(other.starPlayers, starPlayers) || other.starPlayers == starPlayers)&&(identical(other.allPlayerStatus, allPlayerStatus) || other.allPlayerStatus == allPlayerStatus)&&(identical(other.starPlayerDetail, starPlayerDetail) || other.starPlayerDetail == starPlayerDetail)&&(identical(other.starPlayerDetailStatus, starPlayerDetailStatus) || other.starPlayerDetailStatus == starPlayerDetailStatus)&&(identical(other.searchPlayers, searchPlayers) || other.searchPlayers == searchPlayers)&&(identical(other.searchPlayerStatus, searchPlayerStatus) || other.searchPlayerStatus == searchPlayerStatus)&&(identical(other.search, search) || other.search == search));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus,const DeepCollectionEquality().hash(searchPlayers),searchPlayerStatus,search);
+int get hashCode => Object.hash(runtimeType,starPlayers,allPlayerStatus,starPlayerDetail,starPlayerDetailStatus,searchPlayers,searchPlayerStatus,search);
 
 @override
 String toString() {

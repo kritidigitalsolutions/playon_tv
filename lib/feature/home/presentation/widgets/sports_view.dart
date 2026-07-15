@@ -33,17 +33,42 @@ class SportsView extends StatefulWidget {
 }
 
 class _SportsViewState extends State<SportsView> {
+  final FocusNode _bottomSentinelFocus = FocusNode(
+    debugLabel: 'bottomSentinel',
+  );
+
   @override
   void initState() {
     context.read<SeriesBloc>().add(SeriesEvent.getSeriesList());
     context.read<HighlightBloc>().add(HighlightEvent.fetchHighLight());
     context.read<StarPayerCubit>().allStarPlayer();
     context.read<PodcastBloc>().add(PodcastEvent.allPodcast());
+    _bottomSentinelFocus.addListener(_onBottomSentinelFocusChange);
+
     super.initState();
   }
 
-  /// Applies the current sport tab filter to a list of series.
-  /// `null` or `HOME` means "show everything".
+  void _onBottomSentinelFocusChange() {
+    if (_bottomSentinelFocus.hasFocus) {
+      // Wait a frame so the sentinel is laid out before we measure it.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Scrollable.ensureVisible(
+          _bottomSentinelFocus.context ?? context,
+          alignment: 1.0, // pull it to the bottom of the viewport
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      });
+    }
+  }
+
+  void dispose() {
+    _bottomSentinelFocus.removeListener(_onBottomSentinelFocusChange);
+    _bottomSentinelFocus.dispose();
+    super.dispose();
+  }
+
   List<SeriesModel> _filterBySport(List<SeriesModel> all) {
     if (widget.sportFilter == null || widget.sportFilter == 'HOME') {
       return all;
@@ -400,8 +425,16 @@ class _SportsViewState extends State<SportsView> {
           _buildPodcastsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
-          // Bottom View
-          BottomView(),
+         // Bottom View — wrapped in Focus so TV D-pad "down" from the
+          // last podcast card has somewhere to land, which forces the
+          // outer scroll view to reveal it.
+          Focus(
+            focusNode: _bottomSentinelFocus,
+            skipTraversal: false,
+            canRequestFocus: true,
+            onKeyEvent: (node, event) => KeyEventResult.ignored,
+            child: BottomView(),
+          ),
           const SizedBox(height: 30),
         ],
       ),
@@ -414,7 +447,6 @@ class _SportsViewState extends State<SportsView> {
         if (state.allHighLightStatus == Status.loading &&
             state.highlights.isEmpty) {
           return SizedBox(
-            
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),

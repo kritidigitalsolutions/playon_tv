@@ -9,6 +9,7 @@ import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_button.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_text_field.dart';
+import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/feature/home/bloc/banner_ads/banner_ads_bloc.dart';
 import 'package:playon/feature/live_tv/bloc/channel_catagory/channel_catagory_bloc.dart';
 import 'package:playon/feature/live_tv/bloc/channels/channels_bloc.dart';
@@ -95,10 +96,16 @@ class _LiveTvState extends State<LiveTv> {
         .state
         .channelCatagoryList;
 
-    final selectedTab =
-        channelCategories.isNotEmpty && selectedIndex < channelCategories.length
-        ? channelCategories[selectedIndex].name
-        : "ALL";
+    // Manually add "ALL" at the beginning of the tab list
+    final List<String> tabNames = ['ALL'];
+    tabNames.addAll(channelCategories.map((e) => e.name).toList());
+
+    // Ensure selectedIndex is valid
+    if (selectedIndex >= tabNames.length) {
+      selectedIndex = 0;
+    }
+
+    final selectedTab = tabNames.isNotEmpty ? tabNames[selectedIndex] : "ALL";
 
     // TV-optimized grid dimensions for 32" TV and above
     final crossAxisCount = isTV
@@ -167,7 +174,7 @@ class _LiveTvState extends State<LiveTv> {
                   ],
                 ),
               ),
-              // Category tabs with TV optimization
+              // Category tabs with "ALL" manually added
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isTV ? 32 : 16,
@@ -176,8 +183,13 @@ class _LiveTvState extends State<LiveTv> {
                 child: BlocBuilder<ChannelCatagoryBloc, ChannelCatagoryState>(
                   builder: (context, state) {
                     final channelCategories = state.channelCatagoryList;
+                    
+                    // Manually add "ALL" at the beginning
+                    final List<String> tabs = ['ALL'];
+                    tabs.addAll(channelCategories.map((e) => e.name).toList());
+                    
                     return AppTabBar(
-                      tabs: channelCategories.map((e) => e.name).toList(),
+                      tabs: tabs,
                       selectedIndex: selectedIndex,
                       onChanged: (value) {
                         setState(() => selectedIndex = value);
@@ -512,12 +524,19 @@ class _LiveTvState extends State<LiveTv> {
                                         IgnorePointer(
                                           child: AppButton(
                                             title: "Watch",
-                                            
                                             radius: 20,
                                             fonSize: isTV ? 16 : 14,
                                             onTap: () {},
                                           ),
                                         ),
+                                        SizedBox(height: 10),
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 10.0),
+                                          child: Text(
+                                            "CH ${channel.channelNumber}",
+                                            style: text11(),
+                                          ),
+                                        )
                                       ],
                                     ),
                                   ),

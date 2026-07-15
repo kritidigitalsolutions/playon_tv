@@ -100,16 +100,16 @@ class _CustomDrawerState extends State<CustomDrawer> {
                     height: 42,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.primary.withOpacity(0.15),
+                      color: AppColors.white,
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.white,
                         width: 1.2,
                       ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(21),
                       child: Padding(
-                        padding: const EdgeInsets.all(7),
+                        padding: const EdgeInsets.all(2),
                         child: Image.asset(AppImage.logo, fit: BoxFit.contain),
                       ),
                     ),

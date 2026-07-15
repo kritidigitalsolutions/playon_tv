@@ -8,6 +8,7 @@ import 'package:playon/core/service/enum.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
+import 'package:playon/core/widgets/bottom_view.dart';
 import 'package:playon/core/widgets/media_payler_widget.dart';
 import 'package:playon/feature/highlights/bloc/highlight/highlight_bloc.dart';
 import 'package:playon/static/app_color.dart';
@@ -24,6 +25,9 @@ class HighlightMatchPage extends StatefulWidget {
 class _HighlightMatchPageState extends State<HighlightMatchPage> {
   bool _isFullscreen = false;
   int _selectedTabIndex = 0;
+  final FocusNode _bottomSentinelFocus = FocusNode(
+    debugLabel: 'bottomSentinel',
+  );
 
   final List<String> _tabs = const [
     'Highlights',
@@ -41,6 +45,21 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
     context.read<HighlightBloc>().add(
       HighlightEvent.highlightDetail(id: widget.id),
     );
+    _bottomSentinelFocus.addListener(_onBottomSentinelFocusChange);
+  }
+
+  void _onBottomSentinelFocusChange() {
+    if (_bottomSentinelFocus.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Scrollable.ensureVisible(
+          _bottomSentinelFocus.context ?? context,
+          alignment: 1.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      });
+    }
   }
 
   void _handleFullscreenChanged(bool fullscreen) {
@@ -52,6 +71,8 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
 
   @override
   void dispose() {
+    _bottomSentinelFocus.removeListener(_onBottomSentinelFocusChange);
+    _bottomSentinelFocus.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -109,6 +130,7 @@ class _HighlightMatchPageState extends State<HighlightMatchPage> {
           tabs: _tabs,
           onFullscreenChanged: _handleFullscreenChanged,
           onTabChanged: (index) => setState(() => _selectedTabIndex = index),
+          bottomSentinelFocus: _bottomSentinelFocus,
         );
       },
     );
@@ -125,6 +147,7 @@ class _HighlightMatchContent extends StatelessWidget {
     required this.tabs,
     required this.onFullscreenChanged,
     required this.onTabChanged,
+    required this.bottomSentinelFocus,
   });
 
   final HighlightDetailResponse highlight;
@@ -133,6 +156,7 @@ class _HighlightMatchContent extends StatelessWidget {
   final List<String> tabs;
   final ValueChanged<bool> onFullscreenChanged;
   final ValueChanged<int> onTabChanged;
+  final FocusNode bottomSentinelFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -329,6 +353,18 @@ class _HighlightMatchContent extends StatelessWidget {
                   // Tab Content — only real data, no mock data
                   _buildTabContent(selectedTabIndex, data),
                   const SizedBox(height: 20),
+
+                  // Bottom View — wrapped in Focus so TV D-pad "down" from the
+                  // last content has somewhere to land, which forces the
+                  // outer scroll view to reveal it.
+                  Focus(
+                    focusNode: bottomSentinelFocus,
+                    skipTraversal: false,
+                    canRequestFocus: true,
+                    onKeyEvent: (node, event) => KeyEventResult.ignored,
+                    child: BottomView(),
+                  ),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),

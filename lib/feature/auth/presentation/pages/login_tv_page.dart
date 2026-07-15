@@ -139,7 +139,7 @@ class _LoginTvPageState extends State<LoginTvPage> {
         return Container(
           width: 76,
           height: 88,
-          margin: const EdgeInsets.only(right: 12),
+          margin: EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: isFilled
                 ? AppColors.primary.withOpacity(0.15)
