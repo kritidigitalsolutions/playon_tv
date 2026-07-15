@@ -50,12 +50,11 @@ class _SportsViewState extends State<SportsView> {
 
   void _onBottomSentinelFocusChange() {
     if (_bottomSentinelFocus.hasFocus) {
-      // Wait a frame so the sentinel is laid out before we measure it.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         Scrollable.ensureVisible(
           _bottomSentinelFocus.context ?? context,
-          alignment: 1.0, // pull it to the bottom of the viewport
+          alignment: 1.0,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
@@ -380,20 +379,15 @@ class _SportsViewState extends State<SportsView> {
           ),
           const SizedBox(height: 30),
 
-          // All Series with their real Matches (fetched per-series via
-          // SeriesDetailUsecase). Replaces the old fake index-based
-          // Tournament Section.
+          // All Series with their real Matches
           BlocBuilder<SeriesBloc, SeriesState>(
             builder: (context, state) {
               if (state.allSeriesStatus == Status.loading &&
                   state.series.isEmpty) {
-                return const SizedBox.shrink(); // already shown above
+                return const SizedBox.shrink();
               }
 
               final sportFiltered = _filterBySport(state.series);
-              // Skip series that have no matches at all - SeriesModel
-              // already carries totalMatches from the all-series API, so
-              // this filters without any extra network calls.
               final withMatches = sportFiltered
                   .where((s) => s.totalMatches > 0)
                   .toList();
@@ -417,17 +411,15 @@ class _SportsViewState extends State<SportsView> {
           _buildHighlightsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
-          // Star Player Edition (Reels) - real API data
+          // Star Player Edition (Reels)
           _buildReelsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
-          // Latest Podcasts (TODO: wire to real API when available)
+          // Latest Podcasts
           _buildPodcastsSection(context, sport: widget.sportFilter),
           const SizedBox(height: 20),
 
-         // Bottom View — wrapped in Focus so TV D-pad "down" from the
-          // last podcast card has somewhere to land, which forces the
-          // outer scroll view to reveal it.
+          // Bottom View
           Focus(
             focusNode: _bottomSentinelFocus,
             skipTraversal: false,
@@ -447,6 +439,7 @@ class _SportsViewState extends State<SportsView> {
         if (state.allHighLightStatus == Status.loading &&
             state.highlights.isEmpty) {
           return SizedBox(
+            height: 250, // FIXED: Added fixed height
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -558,15 +551,9 @@ class _SportsViewState extends State<SportsView> {
     );
   }
 
-  /// Star Player Edition (Reels). Backed entirely by
-  /// `StarPayerCubit.allStarPlayer()` — a single `StarPlayerResponse`
-  /// whose `highlights` list feeds every card. No mock/demo fallback:
-  /// loading shows a spinner, error shows a retry, empty just collapses
-  /// the section.
   Widget _buildReelsSection(BuildContext context, {String? sport}) {
     return BlocBuilder<StarPayerCubit, StarPayerState>(
       builder: (context, state) {
-        // Loading state
         if (state.allPlayerStatus == Status.loading) {
           return const SizedBox(
             height: 260,
@@ -576,7 +563,6 @@ class _SportsViewState extends State<SportsView> {
           );
         }
 
-        // Error state
         if (state.allPlayerStatus == Status.error) {
           return SizedBox(
             height: 260,
@@ -603,7 +589,6 @@ class _SportsViewState extends State<SportsView> {
 
         final allHighlights = state.starPlayers?.highlights ?? [];
 
-        // Filter by the active sport tab, if any.
         List<StarPlayerModel> filteredHighlights = allHighlights;
         if (sport != null && sport != 'HOME') {
           filteredHighlights = allHighlights
@@ -611,7 +596,6 @@ class _SportsViewState extends State<SportsView> {
               .toList();
         }
 
-        // Empty state
         if (filteredHighlights.isEmpty) {
           return const SizedBox.shrink();
         }
@@ -673,7 +657,6 @@ class _SportsViewState extends State<SportsView> {
       builder: (context, state) {
         final podcasts = state.podcastResponse?.podcasts ?? [];
 
-        // Loading state (only show shimmer if we have nothing yet)
         if (state.allPodcastStatus == Status.loading && podcasts.isEmpty) {
           return SizedBox(
             height: 290,
@@ -693,7 +676,6 @@ class _SportsViewState extends State<SportsView> {
           );
         }
 
-        // Error state
         if (state.allPodcastStatus == Status.error && podcasts.isEmpty) {
           return SizedBox(
             height: 290,
@@ -720,7 +702,6 @@ class _SportsViewState extends State<SportsView> {
           );
         }
 
-        // Filter by active sport tab
         final filtered = (sport == null || sport == 'HOME')
             ? podcasts
             : podcasts
@@ -794,10 +775,6 @@ class _SportsViewState extends State<SportsView> {
 }
 
 /// Wraps any child with the same focus-glow treatment as SeriesCard
-/// (from HighlightsView): a Container whose border/boxShadow change
-/// color+intensity on focus. No flat background tint, no scale — just
-/// glow. TvFocusable supplies the FocusNode + D-pad/Select handling;
-/// this widget owns the visual look.
 class _GlowFocusCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onSelect;
@@ -843,8 +820,6 @@ class _GlowFocusCardState extends State<_GlowFocusCard> {
       focusNode: _focusNode,
       autofocus: widget.autofocus,
       borderRadius: widget.borderRadius,
-      // No flat tint — the Container glow below is the only focus
-      // indicator, same as SeriesCard/SeriesCards.
       focusBackgroundColor: Colors.transparent,
       onSelect: widget.onSelect,
       child: Container(
@@ -876,10 +851,7 @@ class _GlowFocusCardState extends State<_GlowFocusCard> {
   }
 }
 
-/// Reusable shimmer placeholder used for every loading state on this
-/// screen (banner, trending series cards, series-detail match cards, and
-/// individual network-image loads), so all loading states look
-/// consistent instead of mixing spinners and shimmer.
+/// Reusable shimmer placeholder
 class _ShimmerBox extends StatelessWidget {
   final double? width;
   final double? height;
@@ -911,15 +883,6 @@ class _ShimmerBox extends StatelessWidget {
 
 /// Renders one series' title as a header, and its real matches in a
 /// horizontal scroller beneath it.
-///
-/// Dispatches `getSeriesDetail` on SeriesBloc once in initState. Because
-/// the bloc only holds a single shared `seriesDetail` field (not keyed by
-/// series id), this row only renders matches when
-/// `state.seriesDetail?.series.id` matches its own series id - otherwise
-/// it shows a loading state. If several rows are visible at once, only
-/// the most recently completed fetch's row will show matches at any
-/// given moment; the others go back to loading until their own fetch is
-/// the latest one in state again.
 class _SeriesMatchesRow extends StatefulWidget {
   final SeriesModel series;
 
@@ -986,8 +949,6 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
                 final isForThisSeries = detail?.series.id == seriesId;
 
                 if (!isForThisSeries) {
-                  // Either nothing loaded yet, or the shared state
-                  // currently holds a different row's result.
                   if (state.seriesDetailStatus == Status.error) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
