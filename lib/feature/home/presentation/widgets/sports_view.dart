@@ -1,9 +1,9 @@
-// lib/feature/home/presentation/widgets/sports_view.dart
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/models/response/star_player_model.dart';
+import 'package:playon/core/service/tv_section.dart';
 import 'package:playon/feature/home/bloc/star_player/star_payer_cubit.dart';
 import 'package:playon/feature/podcast/bloc/podcast/podcast_bloc.dart';
 import 'package:shimmer/shimmer.dart';
@@ -37,6 +37,24 @@ class _SportsViewState extends State<SportsView> {
     debugLabel: 'bottomSentinel',
   );
 
+  // Fixed order constants — NOT a mutable counter. BlocBuilders rebuild
+  // independently of each other (e.g. SeriesBloc emitting a new state
+  // only rebuilds its own BlocBuilder, not the whole SportsView), so a
+  // shared incrementing counter gets corrupted across those partial
+  // rebuilds. Fixed values stay stable no matter which bloc fires.
+  static const int _orderBanner = 0;
+  static const int _orderTrending = 1;
+  static const int _orderSeriesMatchesBase = 2; // + index per series row
+  static const int _orderHighlights = 1000; // big gap so any number of
+  static const int _orderReels = 1001; // series-match rows fit safely
+  static const int _orderPodcasts = 1002;
+
+  final ScrollController _bannerScroll = ScrollController();
+  final ScrollController _trendingScroll = ScrollController();
+  final ScrollController _highlightsScroll = ScrollController();
+  final ScrollController _reelsScroll = ScrollController();
+  final ScrollController _podcastsScroll = ScrollController();
+
   @override
   void initState() {
     context.read<SeriesBloc>().add(SeriesEvent.getSeriesList());
@@ -62,9 +80,15 @@ class _SportsViewState extends State<SportsView> {
     }
   }
 
+  @override
   void dispose() {
     _bottomSentinelFocus.removeListener(_onBottomSentinelFocusChange);
     _bottomSentinelFocus.dispose();
+    _bannerScroll.dispose();
+    _trendingScroll.dispose();
+    _highlightsScroll.dispose();
+    _reelsScroll.dispose();
+    _podcastsScroll.dispose();
     super.dispose();
   }
 
@@ -89,6 +113,7 @@ class _SportsViewState extends State<SportsView> {
             builder: (context, state) {
               if (state.bannerStatus == Status.loading) {
                 return SizedBox(
+                  width: double.infinity,
                   height: MediaQuery.sizeOf(context).height * 0.55,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -112,49 +137,54 @@ class _SportsViewState extends State<SportsView> {
 
               return SizedBox(
                 height: MediaQuery.sizeOf(context).height * 0.55,
-                child: FocusTraversalGroup(
-                  policy: ReadingOrderTraversalPolicy(),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.bannerAds.length,
-                    itemBuilder: (context, index) {
-                      final banner = state.bannerAds[index];
+                child: TvSectionScope(
+                  order: _orderBanner,
+                  scrollController: _bannerScroll,
+                  child: FocusTraversalGroup(
+                    policy: ReadingOrderTraversalPolicy(),
+                    child: ListView.builder(
+                      controller: _bannerScroll,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: state.bannerAds.length,
+                      itemBuilder: (context, index) {
+                        final banner = state.bannerAds[index];
 
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: _GlowFocusCard(
-                          autofocus: index == 0,
-                          borderRadius: BorderRadius.circular(20),
-                          onSelect: () {
-                            if (banner.link.isNotEmpty) {
-                              // Open banner.link or navigate
-                            }
-                          },
-                          child: SizedBox(
-                            width: MediaQuery.sizeOf(context).width * 0.85,
-                            height: double.infinity,
-                            child: Image.network(
-                              banner.image,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return const _ShimmerBox(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  borderRadius: BorderRadius.zero,
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Icon(Icons.broken_image, size: 40),
-                                );
-                              },
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: _GlowFocusCard(
+                            autofocus: index == 0,
+                            borderRadius: BorderRadius.circular(20),
+                            onSelect: () {
+                              if (banner.link.isNotEmpty) {
+                                // Open banner.link or navigate
+                              }
+                            },
+                            child: SizedBox(
+                              width: MediaQuery.sizeOf(context).width * 0.85,
+                              height: double.infinity,
+                              child: Image.network(
+                                banner.image,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const _ShimmerBox(
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    borderRadius: BorderRadius.zero,
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(Icons.broken_image, size: 40),
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               );
@@ -236,140 +266,145 @@ class _SportsViewState extends State<SportsView> {
                   const SizedBox(height: 16),
                   SizedBox(
                     height: 250,
-                    child: FocusTraversalGroup(
-                      policy: ReadingOrderTraversalPolicy(),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trending.length,
-                        itemBuilder: (context, index) {
-                          final series = trending[index];
+                    child: TvSectionScope(
+                      order: _orderTrending,
+                      scrollController: _trendingScroll,
+                      child: FocusTraversalGroup(
+                        policy: ReadingOrderTraversalPolicy(),
+                        child: ListView.builder(
+                          controller: _trendingScroll,
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: trending.length,
+                          itemBuilder: (context, index) {
+                            final series = trending[index];
 
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: _GlowFocusCard(
-                              autofocus: index == 0,
-                              borderRadius: BorderRadius.circular(16),
-                              onSelect: () {
-                                AppNavigation.push(
-                                  context,
-                                  "/trending/${series.id}",
-                                );
-                              },
-                              child: SizedBox(
-                                width: 220,
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    series.banner.isNotEmpty
-                                        ? Image.network(
-                                            series.banner,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                                  return Image.asset(
-                                                    AppImage.tornamentlogo,
-                                                    fit: BoxFit.cover,
-                                                  );
-                                                },
-                                            loadingBuilder:
-                                                (context, child, progress) {
-                                                  if (progress == null) {
-                                                    return child;
-                                                  }
-                                                  return const _ShimmerBox(
-                                                    width: double.infinity,
-                                                    height: double.infinity,
-                                                    borderRadius:
-                                                        BorderRadius.zero,
-                                                  );
-                                                },
-                                          )
-                                        : Image.asset(
-                                            AppImage.tornamentlogo,
-                                            fit: BoxFit.cover,
-                                          ),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            Colors.black.withOpacity(0.35),
-                                            Colors.transparent,
-                                            Colors.black.withOpacity(0.75),
-                                          ],
-                                          stops: const [0.0, 0.5, 1.0],
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 12,
-                                      left: 12,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(50),
-                                        child: BackdropFilter(
-                                          filter: ImageFilter.blur(
-                                            sigmaX: 10,
-                                            sigmaY: 10,
-                                          ),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: AppColors.white
-                                                  .withOpacity(0.15),
-                                              border: Border.all(
-                                                color: AppColors.white
-                                                    .withOpacity(0.3),
-                                                width: 1,
-                                              ),
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 16),
+                              child: _GlowFocusCard(
+                                autofocus: index == 0,
+                                borderRadius: BorderRadius.circular(16),
+                                onSelect: () {
+                                  AppNavigation.push(
+                                    context,
+                                    "/trending/${series.id}",
+                                  );
+                                },
+                                child: SizedBox(
+                                  width: 220,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      series.banner.isNotEmpty
+                                          ? Image.network(
+                                              series.banner,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Image.asset(
+                                                      AppImage.tornamentlogo,
+                                                      fit: BoxFit.cover,
+                                                    );
+                                                  },
+                                              loadingBuilder:
+                                                  (context, child, progress) {
+                                                    if (progress == null) {
+                                                      return child;
+                                                    }
+                                                    return const _ShimmerBox(
+                                                      width: double.infinity,
+                                                      height: double.infinity,
+                                                      borderRadius:
+                                                          BorderRadius.zero,
+                                                    );
+                                                  },
+                                            )
+                                          : Image.asset(
+                                              AppImage.tornamentlogo,
+                                              fit: BoxFit.cover,
                                             ),
-                                            child:
-                                                series.tournamentLogo.isNotEmpty
-                                                ? Image.network(
-                                                    series.tournamentLogo,
-                                                    width: 32,
-                                                    height: 32,
-                                                    errorBuilder:
-                                                        (
-                                                          context,
-                                                          error,
-                                                          stackTrace,
-                                                        ) {
-                                                          return Image.asset(
-                                                            AppImage.logo,
-                                                            width: 32,
-                                                            height: 32,
-                                                          );
-                                                        },
-                                                  )
-                                                : Image.asset(
-                                                    AppImage.logo,
-                                                    width: 32,
-                                                    height: 32,
-                                                  ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.black.withOpacity(0.35),
+                                              Colors.transparent,
+                                              Colors.black.withOpacity(0.75),
+                                            ],
+                                            stops: const [0.0, 0.5, 1.0],
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    Positioned(
-                                      left: 12,
-                                      right: 12,
-                                      bottom: 12,
-                                      child: Text(
-                                        series.title,
-                                        style: text17(color: AppColors.white),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                      Positioned(
+                                        top: 12,
+                                        left: 12,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(50),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(
+                                              sigmaX: 10,
+                                              sigmaY: 10,
+                                            ),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: AppColors.white
+                                                    .withOpacity(0.15),
+                                                border: Border.all(
+                                                  color: AppColors.white
+                                                      .withOpacity(0.3),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child:
+                                                  series.tournamentLogo.isNotEmpty
+                                                  ? Image.network(
+                                                      series.tournamentLogo,
+                                                      width: 32,
+                                                      height: 32,
+                                                      errorBuilder:
+                                                          (
+                                                            context,
+                                                            error,
+                                                            stackTrace,
+                                                          ) {
+                                                            return Image.asset(
+                                                              AppImage.logo,
+                                                              width: 32,
+                                                              height: 32,
+                                                            );
+                                                          },
+                                                    )
+                                                  : Image.asset(
+                                                      AppImage.logo,
+                                                      width: 32,
+                                                      height: 32,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      Positioned(
+                                        left: 12,
+                                        right: 12,
+                                        bottom: 12,
+                                        child: Text(
+                                          series.title,
+                                          style: text17(color: AppColors.white),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -399,8 +434,12 @@ class _SportsViewState extends State<SportsView> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final series in withMatches)
-                    _SeriesMatchesRow(series: series),
+                  for (final entry in withMatches.asMap().entries)
+                    _SeriesMatchesRow(
+                      key: ValueKey('series_matches_${entry.value.id}'),
+                      series: entry.value,
+                      order: _orderSeriesMatchesBase + entry.key,
+                    ),
                 ],
               );
             },
@@ -439,7 +478,7 @@ class _SportsViewState extends State<SportsView> {
         if (state.allHighLightStatus == Status.loading &&
             state.highlights.isEmpty) {
           return SizedBox(
-            height: 250, // FIXED: Added fixed height
+            height: 250,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -507,41 +546,46 @@ class _SportsViewState extends State<SportsView> {
             ),
             SizedBox(
               height: 250,
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _GlowFocusCard(
-                        autofocus: index == 0,
-                        borderRadius: BorderRadius.circular(16),
-                        onSelect: () {
-                          AppNavigation.push(
-                            context,
-                            "/highlightMatch/${item.id}",
-                          );
-                        },
-                        child: HighlightCard(
-                          image: item.thumbnail,
-                          logo: item.series.tournamentLogo.isNotEmpty
-                              ? item.series.tournamentLogo
-                              : AppImage.logo,
-                          tournamentName: item.series.title,
-                          teamA: item.teamA.shortName.isNotEmpty
-                              ? item.teamA.shortName
-                              : item.teamA.name,
-                          teamB: item.teamB.shortName.isNotEmpty
-                              ? item.teamB.shortName
-                              : item.teamB.name,
+              child: TvSectionScope(
+                order: _orderHighlights,
+                scrollController: _highlightsScroll,
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: ListView.builder(
+                    controller: _highlightsScroll,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final item = filtered[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _GlowFocusCard(
+                          autofocus: index == 0,
+                          borderRadius: BorderRadius.circular(16),
+                          onSelect: () {
+                            AppNavigation.push(
+                              context,
+                              "/highlightMatch/${item.id}",
+                            );
+                          },
+                          child: HighlightCard(
+                            image: item.thumbnail,
+                            logo: item.series.tournamentLogo.isNotEmpty
+                                ? item.series.tournamentLogo
+                                : AppImage.logo,
+                            tournamentName: item.series.title,
+                            teamA: item.teamA.shortName.isNotEmpty
+                                ? item.teamA.shortName
+                                : item.teamA.name,
+                            teamB: item.teamB.shortName.isNotEmpty
+                                ? item.teamB.shortName
+                                : item.teamB.name,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -614,35 +658,40 @@ class _SportsViewState extends State<SportsView> {
             ),
             SizedBox(
               height: 260,
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredHighlights.length,
-                  itemBuilder: (context, index) {
-                    final highlight = filteredHighlights[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _GlowFocusCard(
-                        autofocus: index == 0,
-                        borderRadius: BorderRadius.circular(16),
-                        onSelect: () {
-                          AppNavigation.push(
-                            context,
-                            "starPlayerVideo/${highlight.id}",
-                          );
-                        },
-                        child: ReelHighlightCard(
-                          starPlayerResponse: StarPlayerResponse(
-                            success: true,
-                            count: 1,
-                            highlights: [highlight],
+              child: TvSectionScope(
+                order: _orderReels,
+                scrollController: _reelsScroll,
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: ListView.builder(
+                    controller: _reelsScroll,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filteredHighlights.length,
+                    itemBuilder: (context, index) {
+                      final highlight = filteredHighlights[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _GlowFocusCard(
+                          autofocus: index == 0,
+                          borderRadius: BorderRadius.circular(16),
+                          onSelect: () {
+                            AppNavigation.push(
+                              context,
+                              "starPlayerVideo/${highlight.id}",
+                            );
+                          },
+                          child: ReelHighlightCard(
+                            starPlayerResponse: StarPlayerResponse(
+                              success: true,
+                              count: 1,
+                              highlights: [highlight],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -740,30 +789,35 @@ class _SportsViewState extends State<SportsView> {
             ),
             SizedBox(
               height: 290,
-              child: FocusTraversalGroup(
-                policy: WidgetOrderTraversalPolicy(),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: _GlowFocusCard(
-                        autofocus: index == 0,
-                        borderRadius: BorderRadius.circular(16),
-                        onSelect: () {
-                          AppNavigation.push(context, "/podcast/${item.id}");
-                        },
-                        child: PodcastCard(
-                          image: item.thumbnail,
-                          title: item.title,
-                          duration: item.duration,
+              child: TvSectionScope(
+                order: _orderPodcasts,
+                scrollController: _podcastsScroll,
+                child: FocusTraversalGroup(
+                  policy: WidgetOrderTraversalPolicy(),
+                  child: ListView.builder(
+                    controller: _podcastsScroll,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final item = filtered[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: _GlowFocusCard(
+                          autofocus: index == 0,
+                          borderRadius: BorderRadius.circular(16),
+                          onSelect: () {
+                            AppNavigation.push(context, "/podcast/${item.id}");
+                          },
+                          child: PodcastCard(
+                            image: item.thumbnail,
+                            title: item.title,
+                            duration: item.duration,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -885,20 +939,33 @@ class _ShimmerBox extends StatelessWidget {
 /// horizontal scroller beneath it.
 class _SeriesMatchesRow extends StatefulWidget {
   final SeriesModel series;
+  final int order;
 
-  const _SeriesMatchesRow({required this.series});
+  const _SeriesMatchesRow({
+    super.key,
+    required this.series,
+    required this.order,
+  });
 
   @override
   State<_SeriesMatchesRow> createState() => _SeriesMatchesRowState();
 }
 
 class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     context.read<SeriesBloc>().add(
       SeriesEvent.getSeriesDetail(id: widget.series.id),
     );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _retry() {
@@ -991,29 +1058,34 @@ class _SeriesMatchesRowState extends State<_SeriesMatchesRow> {
                   );
                 }
 
-                return FocusTraversalGroup(
-                  policy: WidgetOrderTraversalPolicy(),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: matches.length,
-                    itemBuilder: (context, index) {
-                      final match = matches[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: _GlowFocusCard(
-                          autofocus: index == 0,
-                          borderRadius: BorderRadius.circular(16),
-                          onSelect: () {
-                            AppNavigation.push(
-                              context,
-                              "matchVideo/${match.id}",
-                            );
-                          },
-                          child: _MatchCard(match: match),
-                        ),
-                      );
-                    },
+                return TvSectionScope(
+                  order: widget.order,
+                  scrollController: _scrollController,
+                  child: FocusTraversalGroup(
+                    policy: WidgetOrderTraversalPolicy(),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: matches.length,
+                      itemBuilder: (context, index) {
+                        final match = matches[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: _GlowFocusCard(
+                            autofocus: index == 0,
+                            borderRadius: BorderRadius.circular(16),
+                            onSelect: () {
+                              AppNavigation.push(
+                                context,
+                                "matchVideo/${match.id}",
+                              );
+                            },
+                            child: _MatchCard(match: match),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },

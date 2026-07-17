@@ -229,12 +229,19 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
       });
     } catch (e) {
       final msg = 'This YouTube video is unavailable.';
+      // Still notify the caller (analytics, parent-level handling,
+      // etc.) but the UI itself no longer shows an error state — see
+      // build() below, which just keeps showing the loading spinner
+      // and silently retries instead.
+      widget.onError?.call(msg);
       if (!mounted) return;
       setState(() {
         _errorMessage = msg;
         _isResolving = false;
       });
-      widget.onError?.call(msg);
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) _resolve();
+      });
     }
   }
 
@@ -246,11 +253,9 @@ class _YoutubeResolvingPlayerState extends State<_YoutubeResolvingPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_errorMessage != null) {
-      return _ErrorView(message: _errorMessage!, onRetry: _resolve);
-    }
-
-    if (_isResolving || _resolvedUrl == null) {
+    // Errors no longer render an error view — just keep showing the
+    // loading spinner (a retry is already scheduled in _resolve()).
+    if (_errorMessage != null || _isResolving || _resolvedUrl == null) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.white),
       );
@@ -391,8 +396,11 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
       final msg = _userMessageFor(
         controller.value.errorDescription ?? 'Playback error',
       );
-      setState(() => _errorMessage = msg);
+      // Still reported upstream via onError (for logging/analytics),
+      // but the UI stays on the loading spinner — see build() below —
+      // while a retry keeps being attempted in the background.
       widget.onError?.call(msg);
+      setState(() => _errorMessage = msg);
 
       if (_retryCount < _maxRetries) {
         _retryCount++;
@@ -466,11 +474,13 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
     } catch (e) {
       if (!mounted) return;
       final msg = _userMessageFor(e.toString());
+      // Reported upstream, but the UI itself just keeps showing the
+      // loading spinner while retries continue in the background.
+      widget.onError?.call(msg);
       setState(() {
         _errorMessage = msg;
         _isLoading = false;
       });
-      widget.onError?.call(msg);
 
       if (_retryCount < _maxRetries) {
         _retryCount++;
@@ -513,20 +523,10 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_errorMessage != null) {
-      return _ErrorView(
-        message: _errorMessage!,
-        onRetry: () {
-          setState(() {
-            _errorMessage = null;
-            _retryCount = 0;
-          });
-          _initStream();
-        },
-      );
-    }
-
-    if (_isLoading || _chewieController == null) {
+    // Errors no longer render the error view — just keep showing the
+    // loading spinner while a retry is attempted in the background
+    // (see _initStream / _onControllerUpdate).
+    if (_errorMessage != null || _isLoading || _chewieController == null) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
       );
@@ -584,63 +584,6 @@ class _NativeMediaPlayerState extends State<_NativeMediaPlayer> {
           },
         ),
       ],
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.white.withOpacity(0.7),
-              size: 48,
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                  height: 1.4,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.15),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

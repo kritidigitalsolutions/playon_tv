@@ -220,13 +220,19 @@ class _LiveTvState extends State<LiveTv> {
 
     final selectedTab = tabNames.isNotEmpty ? tabNames[selectedIndex] : "ALL";
 
-    // TV-optimized grid dimensions for 32" TV and above
-    final crossAxisCount = isTV
-        ? 6
-        : 4; // 6 columns on TV for better use of space
-    final childAspectRatio = isTV ? 1.4 : 1.5; // Slightly taller on TV
-    final crossAxisSpacing = isTV ? 22.0 : 12.0; // More spacing on TV
-    final mainAxisSpacing = isTV ? 20.0 : 12.0; // More spacing on TV
+    // TV-optimized grid dimensions.
+    // NOTE: childAspectRatio is NOT fixed anymore — it's computed at
+    // build time inside a LayoutBuilder from the real available width,
+    // targeting a fixed card content height. That keeps card height
+    // constant/responsive across phones, tablets, and TVs instead of
+    // stretching taller as the screen gets wider.
+    final crossAxisCount = isTV ? 6 : 3; // 3 columns on mobile/tablet
+    final crossAxisSpacing = isTV ? 22.0 : 12.0;
+    final mainAxisSpacing = isTV ? 20.0 : 12.0;
+    // Fixed target height for a card's content (logo row + name +
+    // category + Watch button + CH number + internal paddings).
+    // Tune this single number to make every card taller/shorter.
+    final cardContentHeight = isTV ? 210.0 : 150.0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -252,7 +258,7 @@ class _LiveTvState extends State<LiveTv> {
                             style: TextStyle(
                               fontSize: isTV ? 28 : 24,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.white,
+                              color: AppColors.white
                             ),
                           ),
                           SizedBox(width: isTV ? 40 : 20),
@@ -261,6 +267,7 @@ class _LiveTvState extends State<LiveTv> {
                               valueListenable: _searchController,
                               builder: (context, value, _) {
                                 return AppTextField(
+                                  
                                   controller: _searchController,
                                   autofocus: !isTV,
                                   hintText: "Search Channel",
@@ -348,11 +355,12 @@ class _LiveTvState extends State<LiveTv> {
                                 }
 
                                 return SizedBox(
+                                  width: double.infinity,
                                   height: isTV
                                       ? size.height * 0.45
                                       : size.height * 0.55,
                                   child: FocusTraversalGroup(
-                                    policy: ReadingOrderTraversalPolicy(),
+                                    policy: WidgetOrderTraversalPolicy(),
                                     child: ListView.builder(
                                       scrollDirection: Axis.horizontal,
                                       padding: EdgeInsets.symmetric(
@@ -400,13 +408,15 @@ class _LiveTvState extends State<LiveTv> {
                                               fit: BoxFit.cover,
                                               loadingBuilder:
                                                   (context, child, progress) {
-                                                    if (progress == null)
+                                                    if (progress == null) {
                                                       return child;
+                                                    }
                                                     return Center(
                                                       child:
                                                           CircularProgressIndicator(
-                                                            strokeWidth: isTV ? 4 : 3,
-                                                          ),
+                                                        strokeWidth:
+                                                            isTV ? 4 : 3,
+                                                      ),
                                                     );
                                                   },
                                               errorBuilder:
@@ -521,146 +531,183 @@ class _LiveTvState extends State<LiveTv> {
                                   );
                                 }
 
-                                return FocusTraversalGroup(
-                                  policy: ReadingOrderTraversalPolicy(),
-                                  child: GridView.builder(
-                                    shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: filteredChannels.length,
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                // LayoutBuilder gives the true available
+                                // width for the grid at this point in the
+                                // tree, so the aspect ratio can be derived
+                                // from it. This keeps the card HEIGHT fixed
+                                // (cardContentHeight) while the WIDTH per
+                                // column simply follows the screen size —
+                                // i.e. proper responsive behaviour instead
+                                // of a static aspect ratio stretching cards
+                                // tall on wider screens.
+                                return LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final totalSpacing = crossAxisSpacing *
+                                        (crossAxisCount - 1);
+                                    final itemWidth =
+                                        (constraints.maxWidth - totalSpacing) /
+                                            crossAxisCount;
+                                    final aspectRatio =
+                                        itemWidth / cardContentHeight;
+
+                                    return FocusTraversalGroup(
+                                      policy: ReadingOrderTraversalPolicy(),
+                                      child: GridView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount: filteredChannels.length,
+                                        gridDelegate:
+                                            SliverGridDelegateWithFixedCrossAxisCount(
                                           crossAxisCount: crossAxisCount,
                                           crossAxisSpacing: crossAxisSpacing,
                                           mainAxisSpacing: mainAxisSpacing,
-                                          childAspectRatio: childAspectRatio,
+                                          childAspectRatio: aspectRatio,
                                         ),
-                                    itemBuilder: (context, index) {
-                                      final channel = filteredChannels[index];
+                                        itemBuilder: (context, index) {
+                                          final channel = filteredChannels[index];
 
-                                      return TvFocusable(
-                                        borderRadius: BorderRadius.circular(
-                                          isTV ? 12 : 10,
-                                        ),
-                                        onSelect: () =>
-                                            _openChannel(context, channel),
-                                        child: AnimatedBox(
-                                          padding: EdgeInsets.all(isTV ? 12 : 8),
-                                          width: double.infinity,
-                                          color: AppColors.background.withAlpha(60),
-                                          border: Border.all(
-                                            color: AppColors.primary,
-                                            width: isTV ? 2 : 1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            isTV ? 12 : 10,
-                                          ),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
+                                          return TvFocusable(
+                                            borderRadius: BorderRadius.circular(
+                                              isTV ? 12 : 10,
+                                            ),
+                                            onSelect: () =>
+                                                _openChannel(context, channel),
+                                            child: AnimatedBox(
+                                              padding: EdgeInsets.all(isTV ? 12 : 8),
+                                              width: double.infinity,
+                                              color: AppColors.background
+                                                  .withAlpha(60),
+                                              border: Border.all(
+                                                color: AppColors.primary,
+                                                width: isTV ? 2 : 1,
+                                              ),
+                                              borderRadius: BorderRadius.circular(
+                                                isTV ? 12 : 10,
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  Container(
-                                                    width: isTV ? 56 : 48,
-                                                    height: isTV ? 56 : 48,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: AppColors.white
-                                                          .withOpacity(0.08),
-                                                      border: Border.all(
-                                                        color: AppColors.white
-                                                            .withOpacity(0.2),
-                                                        width: isTV ? 2 : 1,
-                                                      ),
-                                                    ),
-                                                    child: ClipOval(
-                                                      child: Padding(
-                                                        padding: EdgeInsets.all(
-                                                          isTV ? 10 : 8,
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        width: isTV ? 56 : 40,
+                                                        height: isTV ? 56 : 40,
+                                                        decoration: BoxDecoration(
+                                                          shape: BoxShape.circle,
+                                                          color: AppColors.white
+                                                              .withOpacity(0.08),
+                                                          border: Border.all(
+                                                            color: AppColors.white
+                                                                .withOpacity(0.2),
+                                                            width: isTV ? 2 : 1,
+                                                          ),
                                                         ),
-                                                        child: channel.logo.isNotEmpty
-                                                            ? Image.network(
-                                                                channel.logo,
-                                                                fit: BoxFit.contain,
-                                                                errorBuilder:
-                                                                    (
+                                                        child: ClipOval(
+                                                          child: Padding(
+                                                            padding: EdgeInsets.all(
+                                                              isTV ? 10 : 6,
+                                                            ),
+                                                            child: channel
+                                                                    .logo.isNotEmpty
+                                                                ? Image.network(
+                                                                    channel.logo,
+                                                                    fit: BoxFit
+                                                                        .contain,
+                                                                    errorBuilder: (
                                                                       context,
                                                                       error,
                                                                       stackTrace,
                                                                     ) {
-                                                                      return Image.asset(
-                                                                        AppImage.logo,
+                                                                      return Image
+                                                                          .asset(
+                                                                        AppImage
+                                                                            .logo,
                                                                         fit: BoxFit
                                                                             .contain,
                                                                       );
                                                                     },
-                                                              )
-                                                            : Image.asset(
-                                                                AppImage.logo,
-                                                                fit: BoxFit.contain,
-                                                              ),
+                                                                  )
+                                                                : Image.asset(
+                                                                    AppImage.logo,
+                                                                    fit: BoxFit
+                                                                        .contain,
+                                                                  ),
+                                                          ),
+                                                        ),
                                                       ),
+                                                      SizedBox(width: isTV ? 12 : 8),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              channel.name,
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    isTV ? 18 : 14,
+                                                                color:
+                                                                    AppColors.white,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                            SizedBox(
+                                                              height: isTV ? 4 : 2,
+                                                            ),
+                                                            Text(
+                                                              channel.category,
+                                                              style: TextStyle(
+                                                                fontSize:
+                                                                    isTV ? 14 : 11,
+                                                                color: AppColors
+                                                                    .white
+                                                                    .withAlpha(150),
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(height: isTV ? 16 : 10),
+                                                  IgnorePointer(
+                                                    child: AppButton(
+                                                     
+                                                      title: "Watch",
+                                                      radius: 10,
+                                                      fonSize: isTV ? 16 : 13,
+                                                      onTap: () {},
                                                     ),
                                                   ),
-                                                  SizedBox(width: isTV ? 12 : 10),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          channel.name,
-                                                          style: TextStyle(
-                                                            fontSize: isTV ? 18 : 16,
-                                                            color: AppColors.white,
-                                                          ),
-                                                          maxLines: 1,
-                                                          overflow:
-                                                              TextOverflow.ellipsis,
-                                                        ),
-                                                        SizedBox(
-                                                          height: isTV ? 4 : 2,
-                                                        ),
-                                                        Text(
-                                                          channel.category,
-                                                          style: TextStyle(
-                                                            fontSize: isTV ? 14 : 12,
-                                                            color: AppColors.white
-                                                                .withAlpha(150),
-                                                          ),
-                                                          maxLines: 1,
-                                                          overflow:
-                                                              TextOverflow.ellipsis,
-                                                        ),
-                                                      ],
+                                                  const SizedBox(height: 8),
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(
+                                                      left: 6.0,
+                                                    ),
+                                                    child: Text(
+                                                      "CH ${channel.channelNumber}",
+                                                      style: text18(),
                                                     ),
                                                   ),
                                                 ],
                                               ),
-                                              SizedBox(height: isTV ? 16 : 12),
-                                              IgnorePointer(
-                                                child: AppButton(
-                                                  title: "Watch",
-                                                  radius: 20,
-                                                  fonSize: isTV ? 16 : 14,
-                                                  onTap: () {},
-                                                ),
-                                              ),
-                                              SizedBox(height: 10),
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 10.0),
-                                                child: Text(
-                                                  "CH ${channel.channelNumber}",
-                                                  style: text11(),
-                                                ),
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),

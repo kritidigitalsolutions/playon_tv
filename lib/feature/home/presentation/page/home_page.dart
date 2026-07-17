@@ -115,6 +115,7 @@ class _HomePageState extends State<HomePage> {
 
           Expanded(
             child: TvFocusable(
+              
               autofocus: true,
               borderRadius: BorderRadius.circular(30),
               onSelect: () {

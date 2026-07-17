@@ -354,12 +354,7 @@ class _SeriesCardVisual extends StatelessWidget {
                         ),
                       ),
                     // Status badge, top-right, when applicable.
-                    if (series.status.isNotEmpty)
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: _Chip(text: series.status.toUpperCase()),
-                      ),
+                   
                   ],
                 ),
               ),

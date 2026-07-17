@@ -281,11 +281,11 @@ class _TVMatchCardState extends State<_TVMatchCard> {
     super.dispose();
   }
 
-  String _formatDuration(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
+  // String _formatDuration(int seconds) {
+  //   final m = seconds ~/ 60;
+  //   final s = seconds % 60;
+  //   return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +296,7 @@ class _TVMatchCardState extends State<_TVMatchCard> {
     final team2 = highlight.teamB.shortName.isNotEmpty
         ? highlight.teamB.shortName
         : highlight.teamB.name;
-    final category = highlight.category;
+    // final category = highlight.category;
     final seriesName = highlight.series.title;
 
     return TvFocusable(
@@ -374,12 +374,33 @@ class _TVMatchCardState extends State<_TVMatchCard> {
                           ),
                         ),
                       ),
-                      if (category.isNotEmpty)
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
+                      // if (category.isNotEmpty)
+                      //   Positioned(
+                      //     top: 10,
+                      //     left: 10,
+                      //     child: Container(
+                      //       padding: const EdgeInsets.symmetric(
+                      //         horizontal: 8,
+                      //         vertical: 3,
+                      //       ),
+                      //       decoration: BoxDecoration(
+                      //         color: Colors.black.withOpacity(0.6),
+                      //         borderRadius: BorderRadius.circular(6),
+                      //       ),
+                      //       child: Text(
+                      //         category.toUpperCase(),
+                      //         style: text11(fontWeight: FontWeight.w600),
+                      //       ),
+                      //     ),
+                      //   ),
+                      Positioned(
+                       
+                        left: 10,
+                        right: 10,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
@@ -387,29 +408,17 @@ class _TVMatchCardState extends State<_TVMatchCard> {
                               color: Colors.black.withOpacity(0.6),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Text(
-                              category.toUpperCase(),
-                              style: text11(fontWeight: FontWeight.w600),
+                              child: Text(
+                                highlight.title,
+                                style: text11(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ),
-                      Positioned(
-                        bottom: 8,
-                        left: 10,
-                        right: 10,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              highlight.title,
-                              style: text11(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              _formatDuration(highlight.duration),
-                              style: text10(),
-                            ),
+                            // Text(
+                            //   _formatDuration(highlight.duration),
+                            //   style: text10(),
+                            // ),
                           ],
                         ),
                       ),

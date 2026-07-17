@@ -219,6 +219,13 @@ class _LoginTvPageState extends State<LoginTvPage> {
 
     final horizontalPadding = size.width * 0.06;
 
+    // Cap the two-column content at a sane max width. Without this the
+    // Row's Expanded panels stretch to fill the entire screen on wide
+    // displays (TV), so the layout looks pinned to the edges instead of
+    // sitting as one centered block — this constraint plus the Center
+    // below is what keeps it centered on every screen size.
+    const maxContentWidth = 1100.0;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state.loginStatus == Status.success) {
@@ -239,82 +246,96 @@ class _LoginTvPageState extends State<LoginTvPage> {
                     horizontal: horizontalPadding,
                     vertical: 24,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Center(
-                          child: AnimatedBox(
-                            height: size.height * 0.6,
-                            width: double.infinity,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.primary),
-                            child: Image.asset(
-                              AppImage.tv,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
+                  // Center both horizontally and vertically within the
+                  // full available screen space...
+                  child: Center(
+                    child: ConstrainedBox(
+                      // ...and never let the content itself grow past
+                      // maxContentWidth, so it stays a centered block
+                      // rather than stretching edge-to-edge on wide/TV
+                      // screens.
+                      constraints: const BoxConstraints(
+                        maxWidth: maxContentWidth,
                       ),
-                      const SizedBox(width: 48),
-                      Expanded(
-                        flex: 6,
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Activate on TV", style: text24()),
-                              const SizedBox(height: 12),
-                              Text(
-                                "Stream on your Big Screen",
-                                style: text17(color: AppColors.grey500),
-                              ),
-                              const SizedBox(height: 28),
-                              Text(
-                                "Enjoy every match on your TV with a\nquick and easy setup",
-                                style: text17(color: AppColors.grey500),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                "Open the app on your TV and enter\nthe code shown to connect",
-                                style: text17(),
-                              ),
-                              const SizedBox(height: 24),
-
-                              // PIN digits + underlying real TextField.
-                              // Selecting/focusing this brings up the
-                              // system keyboard — no custom keypad.
-                              _buildPinInput(),
-
-                              const SizedBox(height: 8),
-                              Text(
-                                "Select the code field and use your TV's keyboard to enter the digits",
-                                style: text14(color: AppColors.grey500),
-                              ),
-                              const SizedBox(height: 32),
-                              SizedBox(
-                                height: 56,
-                                width: 220,
-                                child: TvFocusable(
-                                  focusNode: _submitFocusNode,
-                                  borderRadius: BorderRadius.circular(10),
-                                  onSelect: _submit,
-                                  child: AppButton(
-                                    radius: 10,
-                                    title: "Submit your code",
-                                    onTap: _submit,
-                                  ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Center(
+                              child: AnimatedBox(
+                                height: size.height * 0.6,
+                                width: double.infinity,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primary),
+                                child: Image.asset(
+                                  AppImage.tv,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 48),
+                          Expanded(
+                            flex: 6,
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Activate on TV", style: text24()),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "Stream on your Big Screen",
+                                    style: text17(color: AppColors.grey500),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  Text(
+                                    "Enjoy every match on your TV with a\nquick and easy setup",
+                                    style: text17(color: AppColors.grey500),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "Open the app on your TV and enter\nthe code shown to connect",
+                                    style: text17(),
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // PIN digits + underlying real TextField.
+                                  // Selecting/focusing this brings up the
+                                  // system keyboard — no custom keypad.
+                                  _buildPinInput(),
+
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Select the code field and use your TV's keyboard to enter the digits",
+                                    style: text14(color: AppColors.grey500),
+                                  ),
+                                  const SizedBox(height: 32),
+                                  SizedBox(
+                                    height: 56,
+                                    width: 220,
+                                    child: TvFocusable(
+                                      focusNode: _submitFocusNode,
+                                      borderRadius: BorderRadius.circular(10),
+                                      onSelect: _submit,
+                                      child: AppButton(
+                                        radius: 10,
+                                        title: "Submit your code",
+                                        onTap: _submit,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

@@ -24,27 +24,27 @@ TextStyle _base({
 TextStyle text10({
   FontWeight fontWeight = FontWeight.normal,
   Color color = AppColors.textPrimary,
-}) => _base(size: 10, fontWeight: fontWeight, color: color);
+}) => _base(size: 15, fontWeight: fontWeight, color: color);
 
 TextStyle text11({
   FontWeight fontWeight = FontWeight.normal,
   Color color = AppColors.textPrimary,
-}) => _base(size: 11, fontWeight: fontWeight, color: color);
+}) => _base(size: 15, fontWeight: fontWeight, color: color);
 
 TextStyle text12({
   FontWeight fontWeight = FontWeight.normal,
   Color color = AppColors.textPrimary,
-}) => _base(size: 12, fontWeight: fontWeight, color: color);
+}) => _base(size: 15, fontWeight: fontWeight, color: color);
 
 TextStyle text13({
   FontWeight fontWeight = FontWeight.normal,
   Color color = AppColors.textPrimary,
-}) => _base(size: 13, fontWeight: fontWeight, color: color);
+}) => _base(size: 15, fontWeight: fontWeight, color: color);
 
 TextStyle text14({
   FontWeight fontWeight = FontWeight.normal,
   Color color = AppColors.textPrimary,
-}) => _base(size: 14, fontWeight: fontWeight, color: color);
+}) => _base(size: 15, fontWeight: fontWeight, color: color);
 
 TextStyle text15({
   FontWeight fontWeight = FontWeight.normal,

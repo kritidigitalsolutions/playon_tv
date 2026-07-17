@@ -77,7 +77,7 @@ class _AppButtonState extends State<AppButton> {
           onTap: widget.isLoading ? null : widget.onTap,
           child: Container(
             
-            padding:EdgeInsets.all(4),
+            padding:EdgeInsets.all(6),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: widget.isLoading
@@ -98,7 +98,7 @@ class _AppButtonState extends State<AppButton> {
                   
                     widget.title,
                     style:
-                        widget.textStyle ?? text10( fontWeight: FontWeight.w600),
+                        widget.textStyle ?? text18( fontWeight: FontWeight.w600),
                   ),
           ),
         ),
