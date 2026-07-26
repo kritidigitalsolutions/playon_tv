@@ -1,4 +1,4 @@
-package com.example.playon
+package com.cametech.playon_tv
 
 import io.flutter.embedding.android.FlutterActivity
 

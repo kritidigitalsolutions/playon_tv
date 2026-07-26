@@ -258,7 +258,7 @@ class _LiveTvState extends State<LiveTv> {
                             style: TextStyle(
                               fontSize: isTV ? 28 : 24,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.white
+                              color: AppColors.white,
                             ),
                           ),
                           SizedBox(width: isTV ? 40 : 20),
@@ -267,7 +267,6 @@ class _LiveTvState extends State<LiveTv> {
                               valueListenable: _searchController,
                               builder: (context, value, _) {
                                 return AppTextField(
-                                  
                                   controller: _searchController,
                                   autofocus: !isTV,
                                   hintText: "Search Channel",
@@ -305,23 +304,30 @@ class _LiveTvState extends State<LiveTv> {
                         horizontal: isTV ? 32 : 16,
                         vertical: isTV ? 12 : 0,
                       ),
-                      child: BlocBuilder<ChannelCatagoryBloc, ChannelCatagoryState>(
-                        builder: (context, state) {
-                          final channelCategories = state.channelCatagoryList;
+                      child:
+                          BlocBuilder<
+                            ChannelCatagoryBloc,
+                            ChannelCatagoryState
+                          >(
+                            builder: (context, state) {
+                              final channelCategories =
+                                  state.channelCatagoryList;
 
-                          // Manually add "ALL" at the beginning
-                          final List<String> tabs = ['ALL'];
-                          tabs.addAll(channelCategories.map((e) => e.name).toList());
+                              // Manually add "ALL" at the beginning
+                              final List<String> tabs = ['ALL'];
+                              tabs.addAll(
+                                channelCategories.map((e) => e.name).toList(),
+                              );
 
-                          return AppTabBar(
-                            tabs: tabs,
-                            selectedIndex: selectedIndex,
-                            onChanged: (value) {
-                              setState(() => selectedIndex = value);
+                              return AppTabBar(
+                                tabs: tabs,
+                                selectedIndex: selectedIndex,
+                                onChanged: (value) {
+                                  setState(() => selectedIndex = value);
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
+                          ),
                     ),
                     const SizedBox(height: 8),
                     // Scrollable content
@@ -389,14 +395,14 @@ class _LiveTvState extends State<LiveTv> {
                                               right: isTV ? 24 : 16,
                                             ),
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(
-                                                isTV ? 24 : 20,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    isTV ? 24 : 20,
+                                                  ),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black.withOpacity(
-                                                    0.3,
-                                                  ),
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
                                                   blurRadius: 10,
                                                   spreadRadius: 2,
                                                 ),
@@ -414,9 +420,10 @@ class _LiveTvState extends State<LiveTv> {
                                                     return Center(
                                                       child:
                                                           CircularProgressIndicator(
-                                                        strokeWidth:
-                                                            isTV ? 4 : 3,
-                                                      ),
+                                                            strokeWidth: isTV
+                                                                ? 4
+                                                                : 3,
+                                                          ),
                                                     );
                                                   },
                                               errorBuilder:
@@ -427,7 +434,8 @@ class _LiveTvState extends State<LiveTv> {
                                                         child: Icon(
                                                           Icons.broken_image,
                                                           size: isTV ? 60 : 40,
-                                                          color: Colors.grey[600],
+                                                          color:
+                                                              Colors.grey[600],
                                                         ),
                                                       ),
                                                     );
@@ -448,7 +456,9 @@ class _LiveTvState extends State<LiveTv> {
                                 if (state.channelsStatus == Status.loading &&
                                     state.channels.isEmpty) {
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 60),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 60,
+                                    ),
                                     child: Center(
                                       child: CircularProgressIndicator(
                                         strokeWidth: isTV ? 4 : 3,
@@ -460,7 +470,9 @@ class _LiveTvState extends State<LiveTv> {
                                 if (state.channelsStatus == Status.error &&
                                     state.channels.isEmpty) {
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 60),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 60,
+                                    ),
                                     child: Center(
                                       child: Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -474,22 +486,24 @@ class _LiveTvState extends State<LiveTv> {
                                           ),
                                           const SizedBox(height: 12),
                                           TvFocusable(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                             onSelect: () {
                                               context.read<ChannelsBloc>().add(
                                                 const ChannelsEvent.allChannels(),
                                               );
                                             },
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 32,
-                                                vertical: 12,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 32,
+                                                    vertical: 12,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: AppColors.primary,
-                                                borderRadius: BorderRadius.circular(
-                                                  8,
-                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Text(
                                                 "Retry",
@@ -515,7 +529,9 @@ class _LiveTvState extends State<LiveTv> {
                                 if (filteredChannels.isEmpty) {
                                   final hasSearch = state.search.isNotEmpty;
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 60),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 60,
+                                    ),
                                     child: Center(
                                       child: Text(
                                         hasSearch
@@ -542,11 +558,11 @@ class _LiveTvState extends State<LiveTv> {
                                 // tall on wider screens.
                                 return LayoutBuilder(
                                   builder: (context, constraints) {
-                                    final totalSpacing = crossAxisSpacing *
-                                        (crossAxisCount - 1);
+                                    final totalSpacing =
+                                        crossAxisSpacing * (crossAxisCount - 1);
                                     final itemWidth =
                                         (constraints.maxWidth - totalSpacing) /
-                                            crossAxisCount;
+                                        crossAxisCount;
                                     final aspectRatio =
                                         itemWidth / cardContentHeight;
 
@@ -559,13 +575,15 @@ class _LiveTvState extends State<LiveTv> {
                                         itemCount: filteredChannels.length,
                                         gridDelegate:
                                             SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: crossAxisCount,
-                                          crossAxisSpacing: crossAxisSpacing,
-                                          mainAxisSpacing: mainAxisSpacing,
-                                          childAspectRatio: aspectRatio,
-                                        ),
+                                              crossAxisCount: crossAxisCount,
+                                              crossAxisSpacing:
+                                                  crossAxisSpacing,
+                                              mainAxisSpacing: mainAxisSpacing,
+                                              childAspectRatio: aspectRatio,
+                                            ),
                                         itemBuilder: (context, index) {
-                                          final channel = filteredChannels[index];
+                                          final channel =
+                                              filteredChannels[index];
 
                                           return TvFocusable(
                                             borderRadius: BorderRadius.circular(
@@ -574,7 +592,9 @@ class _LiveTvState extends State<LiveTv> {
                                             onSelect: () =>
                                                 _openChannel(context, channel),
                                             child: AnimatedBox(
-                                              padding: EdgeInsets.all(isTV ? 12 : 8),
+                                              padding: EdgeInsets.all(
+                                                isTV ? 12 : 8,
+                                              ),
                                               width: double.infinity,
                                               color: AppColors.background
                                                   .withAlpha(60),
@@ -582,9 +602,10 @@ class _LiveTvState extends State<LiveTv> {
                                                 color: AppColors.primary,
                                                 width: isTV ? 2 : 1,
                                               ),
-                                              borderRadius: BorderRadius.circular(
-                                                isTV ? 12 : 10,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    isTV ? 12 : 10,
+                                                  ),
                                               child: Column(
                                                 mainAxisSize: MainAxisSize.min,
                                                 crossAxisAlignment:
@@ -596,49 +617,61 @@ class _LiveTvState extends State<LiveTv> {
                                                         width: isTV ? 56 : 40,
                                                         height: isTV ? 56 : 40,
                                                         decoration: BoxDecoration(
-                                                          shape: BoxShape.circle,
+                                                          shape:
+                                                              BoxShape.circle,
                                                           color: AppColors.white
-                                                              .withOpacity(0.08),
+                                                              .withOpacity(
+                                                                0.08,
+                                                              ),
                                                           border: Border.all(
-                                                            color: AppColors.white
-                                                                .withOpacity(0.2),
+                                                            color: AppColors
+                                                                .white
+                                                                .withOpacity(
+                                                                  0.2,
+                                                                ),
                                                             width: isTV ? 2 : 1,
                                                           ),
                                                         ),
                                                         child: ClipOval(
                                                           child: Padding(
-                                                            padding: EdgeInsets.all(
-                                                              isTV ? 10 : 6,
-                                                            ),
-                                                            child: channel
-                                                                    .logo.isNotEmpty
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                                  isTV ? 10 : 6,
+                                                                ),
+                                                            child:
+                                                                channel
+                                                                    .logo
+                                                                    .isNotEmpty
                                                                 ? Image.network(
-                                                                    channel.logo,
+                                                                    channel
+                                                                        .logo,
                                                                     fit: BoxFit
                                                                         .contain,
-                                                                    errorBuilder: (
-                                                                      context,
-                                                                      error,
-                                                                      stackTrace,
-                                                                    ) {
-                                                                      return Image
-                                                                          .asset(
-                                                                        AppImage
-                                                                            .logo,
-                                                                        fit: BoxFit
-                                                                            .contain,
-                                                                      );
-                                                                    },
+                                                                    errorBuilder:
+                                                                        (
+                                                                          context,
+                                                                          error,
+                                                                          stackTrace,
+                                                                        ) {
+                                                                          return Image.asset(
+                                                                            AppImage.logo,
+                                                                            fit:
+                                                                                BoxFit.contain,
+                                                                          );
+                                                                        },
                                                                   )
                                                                 : Image.asset(
-                                                                    AppImage.logo,
+                                                                    AppImage
+                                                                        .logo,
                                                                     fit: BoxFit
                                                                         .contain,
                                                                   ),
                                                           ),
                                                         ),
                                                       ),
-                                                      SizedBox(width: isTV ? 12 : 8),
+                                                      SizedBox(
+                                                        width: isTV ? 12 : 8,
+                                                      ),
                                                       Expanded(
                                                         child: Column(
                                                           crossAxisAlignment:
@@ -648,10 +681,11 @@ class _LiveTvState extends State<LiveTv> {
                                                             Text(
                                                               channel.name,
                                                               style: TextStyle(
-                                                                fontSize:
-                                                                    isTV ? 18 : 14,
-                                                                color:
-                                                                    AppColors.white,
+                                                                fontSize: isTV
+                                                                    ? 18
+                                                                    : 14,
+                                                                color: AppColors
+                                                                    .white,
                                                               ),
                                                               maxLines: 1,
                                                               overflow:
@@ -659,16 +693,21 @@ class _LiveTvState extends State<LiveTv> {
                                                                       .ellipsis,
                                                             ),
                                                             SizedBox(
-                                                              height: isTV ? 4 : 2,
+                                                              height: isTV
+                                                                  ? 4
+                                                                  : 2,
                                                             ),
                                                             Text(
                                                               channel.category,
                                                               style: TextStyle(
-                                                                fontSize:
-                                                                    isTV ? 14 : 11,
+                                                                fontSize: isTV
+                                                                    ? 14
+                                                                    : 11,
                                                                 color: AppColors
                                                                     .white
-                                                                    .withAlpha(150),
+                                                                    .withAlpha(
+                                                                      150,
+                                                                    ),
                                                               ),
                                                               maxLines: 1,
                                                               overflow:
@@ -680,10 +719,11 @@ class _LiveTvState extends State<LiveTv> {
                                                       ),
                                                     ],
                                                   ),
-                                                  SizedBox(height: isTV ? 16 : 10),
+                                                  SizedBox(
+                                                    height: isTV ? 16 : 10,
+                                                  ),
                                                   IgnorePointer(
                                                     child: AppButton(
-                                                     
                                                       title: "Watch",
                                                       radius: 10,
                                                       fonSize: isTV ? 16 : 13,
@@ -692,9 +732,10 @@ class _LiveTvState extends State<LiveTv> {
                                                   ),
                                                   const SizedBox(height: 8),
                                                   Padding(
-                                                    padding: const EdgeInsets.only(
-                                                      left: 6.0,
-                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          left: 6.0,
+                                                        ),
                                                     child: Text(
                                                       "CH ${channel.channelNumber}",
                                                       style: text18(),
@@ -739,10 +780,7 @@ class _LiveTvState extends State<LiveTv> {
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.primary,
-                        width: 2,
-                      ),
+                      border: Border.all(color: AppColors.primary, width: 2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.5),
