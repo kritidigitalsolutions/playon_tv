@@ -72,7 +72,7 @@ class _TvFocusableState extends State<TvFocusable> {
 
     final key = event.logicalKey;
 
-    // Activation
+    // Activation (select / enter / gameButtonA / space)
     if (key == LogicalKeyboardKey.select ||
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter ||
@@ -84,23 +84,16 @@ class _TvFocusableState extends State<TvFocusable> {
       return KeyEventResult.handled;
     }
 
-    // Directional navigation
+    // Directional navigation (arrow keys map to D-pad on Android TV)
     TraversalDirection? direction;
-    switch (key) {
-      case LogicalKeyboardKey.arrowUp:
-        direction = TraversalDirection.up;
-        break;
-      case LogicalKeyboardKey.arrowDown:
-        direction = TraversalDirection.down;
-        break;
-      case LogicalKeyboardKey.arrowLeft:
-        direction = TraversalDirection.left;
-        break;
-      case LogicalKeyboardKey.arrowRight:
-        direction = TraversalDirection.right;
-        break;
-      default:
-        direction = null;
+    if (key == LogicalKeyboardKey.arrowUp) {
+      direction = TraversalDirection.up;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      direction = TraversalDirection.down;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      direction = TraversalDirection.left;
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      direction = TraversalDirection.right;
     }
 
     if (direction != null) {

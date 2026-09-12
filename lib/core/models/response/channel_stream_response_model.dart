@@ -3,12 +3,14 @@ import 'package:equatable/equatable.dart';
 class ChannelStreamResponse extends Equatable {
   final bool success;
   final String message;
+  final bool locked;
   final StreamData stream;
   final Channel channel;
 
   const ChannelStreamResponse({
     required this.success,
     required this.message,
+    this.locked = false,
     required this.stream,
     required this.channel,
   });
@@ -17,6 +19,7 @@ class ChannelStreamResponse extends Equatable {
     return ChannelStreamResponse(
       success: json['success'] ?? false,
       message: json['message'] ?? '',
+      locked: json['locked'] ?? false,
       stream: StreamData.fromJson(json['stream'] ?? {}),
       channel: Channel.fromJson(json['channel'] ?? {}),
     );
@@ -26,6 +29,7 @@ class ChannelStreamResponse extends Equatable {
     return {
       'success': success,
       'message': message,
+      'locked': locked,
       'stream': stream.toJson(),
       'channel': channel.toJson(),
     };
@@ -34,12 +38,14 @@ class ChannelStreamResponse extends Equatable {
   ChannelStreamResponse copyWith({
     bool? success,
     String? message,
+    bool? locked,
     StreamData? stream,
     Channel? channel,
   }) {
     return ChannelStreamResponse(
       success: success ?? this.success,
       message: message ?? this.message,
+      locked: locked ?? this.locked,
       stream: stream ?? this.stream,
       channel: channel ?? this.channel,
     );
@@ -49,6 +55,7 @@ class ChannelStreamResponse extends Equatable {
   List<Object?> get props => [
         success,
         message,
+        locked,
         stream,
         channel,
       ];

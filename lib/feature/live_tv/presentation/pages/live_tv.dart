@@ -283,13 +283,23 @@ class _LiveTvState extends State<LiveTv> {
                                   ),
                                   suffixIcon: value.text.isEmpty
                                       ? null
-                                      : IconButton(
-                                          icon: Icon(
-                                            Icons.close,
-                                            size: isTV ? 28 : 20,
-                                            color: AppColors.textSecondary,
+                                      : Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 8),
+                                          child: TvFocusable(
+                                            borderRadius:
+                                                BorderRadius.circular(50),
+                                            onSelect: _clearSearch,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(6.0),
+                                              child: Icon(
+                                                Icons.close,
+                                                size: isTV ? 28 : 20,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
                                           ),
-                                          onPressed: _clearSearch,
                                         ),
                                 );
                               },

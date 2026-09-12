@@ -17,11 +17,31 @@ class WatchLiveBloc extends Bloc<WatchLiveEvent, WatchLiveState> {
       super(WatchLiveState()) {
     on<_WatchLiveChannel>((event, emit) async {
       emit(state.copyWith(isLiveWatch: Status.loading));
-      final result=await _watchLiveUsecase(slug: event.slug);
-      if(result!=null){
-        emit(state.copyWith(isLiveWatch: Status.success,channelStreamResponse: result));
-      }else{
-        emit(state.copyWith(isLiveWatch: Status.error));
+      try {
+        final result = await _watchLiveUsecase(slug: event.slug);
+        if (result != null) {
+          if (result.success && result.stream.streamUrl.isNotEmpty) {
+            emit(state.copyWith(
+              isLiveWatch: Status.success,
+              channelStreamResponse: result,
+            ));
+          } else {
+            emit(state.copyWith(
+              isLiveWatch: Status.error,
+              channelStreamResponse: result,
+            ));
+          }
+        } else {
+          emit(state.copyWith(
+            isLiveWatch: Status.error,
+            channelStreamResponse: null,
+          ));
+        }
+      } catch (e) {
+        emit(state.copyWith(
+          isLiveWatch: Status.error,
+          channelStreamResponse: null,
+        ));
       }
     });
   }

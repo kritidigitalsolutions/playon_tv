@@ -55,9 +55,10 @@ class _CustomDrawerState extends State<CustomDrawer> {
     setState(() => _footerFocused = isFocused);
   }
 
-  initState() {
-    context.read<AuthBloc>().add(AuthEvent.fetchUser());
+  @override
+  void initState() {
     super.initState();
+    context.read<AuthBloc>().add(AuthEvent.fetchUser());
   }
 
   @override
@@ -321,7 +322,9 @@ class _DrawerItemState extends State<_DrawerItem> {
       final key = event.logicalKey;
       if (key == LogicalKeyboardKey.select ||
           key == LogicalKeyboardKey.enter ||
-          key == LogicalKeyboardKey.gameButtonA) {
+          key == LogicalKeyboardKey.numpadEnter ||
+          key == LogicalKeyboardKey.gameButtonA ||
+          key == LogicalKeyboardKey.space) {
         widget.onTap();
         return KeyEventResult.handled;
       }

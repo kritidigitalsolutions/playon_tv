@@ -58,27 +58,74 @@ class LiveTvDatasource {
     }
   }
 
-  Future<ChannelStreamResponse> watchLive({required String slug}) async {
-    final token = await StorageService.getToken();
-
+  Future<ChannelStreamResponse?> watchLive({required String slug}) async {
     try {
+      final token = await StorageService.getToken();
       final url = Uri.parse(AppUrl.watchLive(slug: slug));
 
       final response = await http.get(
         url,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
+          if (token != null && token.isNotEmpty) "Authorization": "Bearer $token",
         },
       );
-      print(response.body);
-      if (response.statusCode == 200) {
-        return ChannelStreamResponse.fromJson(jsonDecode(response.body));
+      print('watchLive [${response.statusCode}]: ${response.body}');
+
+      if (response.body.isNotEmpty) {
+        try {
+          final dynamic jsonData = jsonDecode(response.body);
+          if (jsonData is Map<String, dynamic>) {
+            return ChannelStreamResponse.fromJson(jsonData);
+          }
+        } catch (_) {}
       }
 
-      throw Exception("Failed to load channel stream (${response.statusCode})");
+      if (response.statusCode == 200) {
+        return null;
+      }
+
+      return ChannelStreamResponse(
+        success: false,
+        message: 'Failed to load channel stream (${response.statusCode})',
+        locked: response.statusCode == 403,
+        stream: const StreamData(
+          streamUrl: '',
+          backupUrl: '',
+          rtmpUrl: '',
+          srtUrl: '',
+          streamType: '',
+        ),
+        channel: const Channel(
+          id: '',
+          name: '',
+          slug: '',
+          category: '',
+          description: '',
+          streamUrl: '',
+          backupUrl: '',
+          rtmpUrl: '',
+          srtUrl: '',
+          streamType: '',
+          quality: '',
+          thumbnail: '',
+          logo: '',
+          status: '',
+          viewerCount: 0,
+          featured: false,
+          createdBy: null,
+          createdAt: null,
+          updatedAt: null,
+          version: 0,
+          channelNumber: 0,
+          isPremium: false,
+          showLiveLogo: false,
+          liveLogo: '',
+        ),
+      );
     } catch (e) {
-      throw Exception("Error fetching channel stream: $e");
+      print("Error fetching channel stream: $e");
+      return null;
     }
   }
 }

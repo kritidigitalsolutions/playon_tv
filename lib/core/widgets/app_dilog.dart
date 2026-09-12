@@ -143,7 +143,10 @@ class _DialogButtonState extends State<_DialogButton> {
   KeyEventResult _handleActivate(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.select ||
-            event.logicalKey == LogicalKeyboardKey.enter)) {
+            event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+            event.logicalKey == LogicalKeyboardKey.gameButtonA ||
+            event.logicalKey == LogicalKeyboardKey.space)) {
       widget.onSelect();
       return KeyEventResult.handled;
     }

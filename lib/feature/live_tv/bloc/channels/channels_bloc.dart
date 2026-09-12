@@ -21,12 +21,14 @@ class ChannelsBloc extends Bloc<ChannelsEvent, ChannelsState> {
   super(ChannelsState()) {
     on<_AllChannels>((event, emit) async {
       emit(state.copyWith(channelsStatus: Status.loading));
-      final result=await _allChannelUsecase(search: state.search);
-      if(result.isNotEmpty){
-        emit(state.copyWith(channels: result,channelsStatus: Status.success));
-      }else if(result.isEmpty){
-        emit(state.copyWith(channelsStatus: Status.success));
-      } else{
+      try {
+        final result = await _allChannelUsecase(search: state.search);
+        if (result.isNotEmpty) {
+          emit(state.copyWith(channels: result, channelsStatus: Status.success));
+        } else {
+          emit(state.copyWith(channelsStatus: Status.success));
+        }
+      } catch (e) {
         emit(state.copyWith(channelsStatus: Status.error));
       }
     });

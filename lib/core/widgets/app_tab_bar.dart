@@ -83,7 +83,9 @@ class _TabItemState extends State<_TabItem> {
       final key = event.logicalKey;
       if (key == LogicalKeyboardKey.select ||
           key == LogicalKeyboardKey.enter ||
-          key == LogicalKeyboardKey.gameButtonA) {
+          key == LogicalKeyboardKey.numpadEnter ||
+          key == LogicalKeyboardKey.gameButtonA ||
+          key == LogicalKeyboardKey.space) {
         widget.onTap();
         return KeyEventResult.handled;
       }

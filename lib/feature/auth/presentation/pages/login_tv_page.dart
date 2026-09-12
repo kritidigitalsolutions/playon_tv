@@ -66,19 +66,23 @@ class _LoginTvPageState extends State<LoginTvPage> {
   }
 
   Future<void> _loadDeviceName() async {
-    final deviceInfo = DeviceInfoPlugin();
+    String deviceName = "Android TV";
 
-    String deviceName = "Unknown Device";
+    try {
+      final deviceInfo = DeviceInfoPlugin();
 
-    if (Platform.isAndroid) {
-      final info = await deviceInfo.androidInfo;
-      deviceName = "${info.manufacturer} ${info.model}";
-    } else if (Platform.isIOS) {
-      final info = await deviceInfo.iosInfo;
-      deviceName = info.name;
-    } else if (Platform.isWindows) {
-      final info = await deviceInfo.windowsInfo;
-      deviceName = info.computerName;
+      if (Platform.isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        deviceName = "${info.manufacturer} ${info.model}";
+      } else if (Platform.isIOS) {
+        final info = await deviceInfo.iosInfo;
+        deviceName = info.name;
+      } else if (Platform.isWindows) {
+        final info = await deviceInfo.windowsInfo;
+        deviceName = info.computerName;
+      }
+    } catch (e) {
+      debugPrint("Error loading device info: $e");
     }
 
     if (mounted) {

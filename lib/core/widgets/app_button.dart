@@ -3,22 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
 import 'package:playon/static/app_color.dart';
 
-/// Shared TV remote key handling: select/enter/gameButtonA -> onTap.
-/// Enter/space are left "ignored" for Material buttons since Material's
-/// own ActivateIntent shortcuts already handle those; we only need to
-/// add the extra "select" key TV remotes send.
+/// Shared TV remote key handling: select/enter/space/gameButtonA -> onTap.
 KeyEventResult _handleTvKey(
   KeyEvent event,
   VoidCallback? onTap, {
-  bool alsoHandleEnter = false,
+  bool alsoHandleEnter = true,
 }) {
   if (event is KeyDownEvent) {
     final key = event.logicalKey;
     final isSelect =
         key == LogicalKeyboardKey.select ||
-        key == LogicalKeyboardKey.gameButtonA;
-    final isEnter = alsoHandleEnter && key == LogicalKeyboardKey.enter;
-    if (isSelect || isEnter) {
+        key == LogicalKeyboardKey.gameButtonA ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space;
+    if (isSelect) {
       onTap?.call();
       return KeyEventResult.handled;
     }

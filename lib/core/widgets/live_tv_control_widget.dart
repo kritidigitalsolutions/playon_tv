@@ -129,6 +129,15 @@ class _LiveTVControlsOverlayState extends State<LiveTVControlsOverlay> {
     _scheduleHide();
   }
 
+  void _togglePlay() {
+    if (_controller == null) return;
+    if (_controller!.value.isPlaying) {
+      _controller!.pause();
+    } else {
+      _controller!.play();
+    }
+  }
+
   void _channelUp() {
     _flashTimer?.cancel();
     setState(() {
@@ -252,6 +261,39 @@ class _LiveTVControlsOverlayState extends State<LiveTVControlsOverlay> {
       return KeyEventResult.ignored;
     }
 
+    // Handle dedicated TV remote media & channel keys
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      _togglePlay();
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay) {
+      if (_controller != null && !_controller!.value.isPlaying) {
+        _controller!.play();
+      }
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPause) {
+      if (_controller != null && _controller!.value.isPlaying) {
+        _controller!.pause();
+      }
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelUp ||
+        key == LogicalKeyboardKey.mediaTrackNext) {
+      _channelUp();
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.mediaTrackPrevious) {
+      _channelDown();
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+
     _keepAlive();
 
     final arrows = {
@@ -348,7 +390,8 @@ class _LiveTVControlsOverlayState extends State<LiveTVControlsOverlay> {
                               if (widget.title != null)
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         widget.title!,
@@ -368,7 +411,6 @@ class _LiveTVControlsOverlayState extends State<LiveTVControlsOverlay> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                     
                                     ],
                                   ),
                                 ),
@@ -492,9 +534,7 @@ class _LiveTVControlsOverlayState extends State<LiveTVControlsOverlay> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                             
-                                  // Channel List
-                                  
+                              // Channel List
                               const SizedBox(height: 14),
                               // Progress bar
                               _TVProgressBar(
@@ -573,7 +613,7 @@ class _ChannelNavButtonState extends State<_ChannelNavButton> {
   @override
   Widget build(BuildContext context) {
     final isActive = widget.channelNumber > 0;
-    
+
     return TvFocusable(
       focusNode: widget.focusNode,
       borderRadius: BorderRadius.circular(16),
@@ -602,14 +642,14 @@ class _ChannelNavButtonState extends State<_ChannelNavButton> {
             color: _focused
                 ? null
                 : (widget.flash
-                    ? _kAccent.withOpacity(0.3)
-                    : Colors.white.withOpacity(0.08)),
+                      ? _kAccent.withOpacity(0.3)
+                      : Colors.white.withOpacity(0.08)),
             border: Border.all(
               color: _focused
                   ? _kAccent
                   : (widget.flash
-                      ? _kAccent.withOpacity(0.6)
-                      : Colors.white.withOpacity(0.15)),
+                        ? _kAccent.withOpacity(0.6)
+                        : Colors.white.withOpacity(0.15)),
               width: _focused ? 3 : 1.5,
             ),
             boxShadow: _focused
@@ -733,7 +773,9 @@ class _ControlChipState extends State<_ControlChip> {
             Text(
               widget.label,
               style: TextStyle(
-                color: _focused || widget.active ? Colors.white : Colors.white70,
+                color: _focused || widget.active
+                    ? Colors.white
+                    : Colors.white70,
                 fontSize: 15,
                 fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
               ),

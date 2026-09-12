@@ -44,11 +44,18 @@ class _SeriesDetailPageState extends State<SeriesDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        IconButton(
-                          onPressed: () {
-                            AppNavigation.pop(context);
-                          },
-                          icon: Icon(Icons.arrow_back, color: AppColors.white),
+                        TvFocusable(
+                          autofocus: true,
+                          borderRadius: BorderRadius.circular(50),
+                          onSelect: () => AppNavigation.pop(context),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -96,13 +103,24 @@ class _SeriesDetailPageState extends State<SeriesDetailPage> {
           children: [
             Text("Something went wrong", style: text17(color: AppColors.white)),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
+            TvFocusable(
+              autofocus: true,
+              borderRadius: BorderRadius.circular(20),
+              onSelect: () {
                 context.read<SeriesBloc>().add(
                   SeriesEvent.getSeriesDetail(id: widget.id),
                 );
               },
-              child: const Text("Retry"),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Text(
+                  "Retry",
+                  style: text16(color: AppColors.white),
+                ),
+              ),
             ),
           ],
         ),

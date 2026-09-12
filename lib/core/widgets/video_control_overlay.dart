@@ -161,6 +161,15 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     _scheduleHide();
   }
 
+  void _togglePlay() {
+    if (_controller == null) return;
+    if (_controller!.value.isPlaying) {
+      _controller!.pause();
+    } else {
+      _controller!.play();
+    }
+  }
+
   Future<void> _seekBy(int seconds) async {
     if (_isSeeking || _controller == null) return;
     _isSeeking = true;
@@ -311,10 +320,39 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
       return KeyEventResult.ignored;
     }
 
-    // Wake up controls on any key press. This still fires even though
-    // this node never holds focus itself — unhandled key events bubble
-    // up through every ancestor Focus node's onKeyEvent, and this node
-    // sits above all the buttons below.
+    // Handle dedicated TV remote media playback keys
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      _togglePlay();
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay) {
+      if (_controller != null && !_controller!.value.isPlaying) {
+        _controller!.play();
+      }
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPause ||
+        key == LogicalKeyboardKey.mediaStop) {
+      if (_controller != null && _controller!.value.isPlaying) {
+        _controller!.pause();
+      }
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward) {
+      _seekBy(10);
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaRewind) {
+      _seekBy(-10);
+      _keepAlive();
+      return KeyEventResult.handled;
+    }
+
+    // Wake up controls on any key press.
     _keepAlive();
 
     final arrows = {

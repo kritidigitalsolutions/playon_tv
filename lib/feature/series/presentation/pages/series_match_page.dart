@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/models/response/match_detail_model.dart' show MatchModel;
 import 'package:playon/core/service/enum.dart';
+import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/animated.dart';
 import 'package:playon/core/widgets/app_tab_bar.dart';
 import 'package:playon/core/widgets/app_textstyle.dart';
@@ -130,9 +131,21 @@ class _SeriesMatchPageState extends State<SeriesMatchPage> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => AppNavigation.pop(context),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TvFocusable(
+                        autofocus: true,
+                        borderRadius: BorderRadius.circular(50),
+                        onSelect: () => AppNavigation.pop(context),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   Expanded(

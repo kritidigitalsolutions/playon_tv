@@ -18,17 +18,19 @@ class ChannelCatagoryBloc
       super(ChannelCatagoryState()) {
     on<_AllChannelCategory>((event, emit) async {
       emit(state.copyWith(channelCatagoryStatus: Status.loading));
-      final result = await _channelCatagoryUsecase();
-      if (result.isNotEmpty) {
-        emit(
-          state.copyWith(
-            channelCatagoryList: result,
-            channelCatagoryStatus: Status.success,
-          ),
-        );
-      } else if (result.isEmpty) {
-        emit(state.copyWith(channelCatagoryStatus: Status.success));
-      } else {
+      try {
+        final result = await _channelCatagoryUsecase();
+        if (result.isNotEmpty) {
+          emit(
+            state.copyWith(
+              channelCatagoryList: result,
+              channelCatagoryStatus: Status.success,
+            ),
+          );
+        } else {
+          emit(state.copyWith(channelCatagoryStatus: Status.success));
+        }
+      } catch (e) {
         emit(state.copyWith(channelCatagoryStatus: Status.error));
       }
     });

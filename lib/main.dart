@@ -5,10 +5,14 @@ import 'package:playon/di/injection.dart';
 import 'package:playon/static/app_route.dart';
 
 void main() async {
-  // Must be the very first call — Injection.initial() and the
-  // HardwareKeyboard handler below both touch Flutter engine
-  // services, which aren't available until the binding exists.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Android TV requires landscape orientation and immersive leanback UI
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   await Injection.initial();
 

@@ -25,7 +25,7 @@ class _SplashPageState extends State<SplashPage> {
   void initState() {
     super.initState();
     debugPrint("🌊 [UI] SplashScreen mounted — will check token and redirect");
-    _redirectTimer = Timer(const Duration(seconds: 5), _checkAndNavigate);
+    _redirectTimer = Timer(const Duration(milliseconds: 1500), _checkAndNavigate);
   }
 
   Future<void> _checkAndNavigate() async {

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playon/core/service/enum.dart';
+import 'package:playon/core/service/tv_focus_navigation.dart';
 import 'package:playon/core/widgets/live_tv_media_player_widget.dart';
 import 'package:playon/feature/live_tv/bloc/channels/channels_bloc.dart';
 import 'package:playon/feature/live_tv/bloc/watch_live/watch_live_bloc.dart';
 import 'package:playon/static/app_color.dart';
+import 'package:playon/static/app_navigation.dart';
 
 class LiveChannelDetailPage extends StatefulWidget {
   const LiveChannelDetailPage({super.key, required this.slug});
@@ -32,26 +34,24 @@ class _LiveChannelDetailPageState extends State<LiveChannelDetailPage> {
   }
 
   void _loadAllChannels() {
-    // Get all channels from the ChannelsBloc
     final channelsState = context.read<ChannelsBloc>().state;
     if (channelsState.channels.isNotEmpty) {
-      _channelList = channelsState.channels.map((channel) => ChannelInfo(
-        slug: channel.slug,
-        name: channel.name,
-        channelNumber: channel.channelNumber,
-        isLive: true,
-      )).toList();
-      
-      // Find the current channel index
+      _channelList = channelsState.channels
+          .map((channel) => ChannelInfo(
+                slug: channel.slug,
+                name: channel.name,
+                channelNumber: channel.channelNumber,
+                isLive: true,
+              ))
+          .toList();
+
       _currentIndex = _channelList.indexWhere((c) => c.slug == currentSlug);
       if (_currentIndex == -1) _currentIndex = 0;
-      
+
       _isLoadingChannels = false;
       _loadChannelData();
     } else {
-      // If channels not loaded yet, wait for them
       _isLoadingChannels = true;
-      // Trigger channel load if needed
       context.read<ChannelsBloc>().add(const ChannelsEvent.allChannels());
       _loadChannelData();
     }
@@ -59,8 +59,8 @@ class _LiveChannelDetailPageState extends State<LiveChannelDetailPage> {
 
   void _loadChannelData() {
     context.read<WatchLiveBloc>().add(
-      WatchLiveEvent.watchLiveChannel(slug: currentSlug),
-    );
+          WatchLiveEvent.watchLiveChannel(slug: currentSlug),
+        );
   }
 
   @override
@@ -78,32 +78,27 @@ class _LiveChannelDetailPageState extends State<LiveChannelDetailPage> {
   }
 
   Future<void> _restoreSystemUi() async {
-    await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-    await SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge,
-      overlays: SystemUiOverlay.values,
-    );
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   void _retry() {
-    context.read<WatchLiveBloc>().add(
-      WatchLiveEvent.watchLiveChannel(slug: currentSlug),
-    );
+    _loadChannelData();
   }
 
-  // FIXED: Channel Up should go to NEXT channel (forward)
   void _onChannelUp() {
     if (_channelList.isEmpty) return;
-    // Go to next channel, wrap to first if at last
     final newIndex = (_currentIndex + 1) % _channelList.length;
     _navigateToChannel(newIndex);
   }
 
-  // FIXED: Channel Down should go to PREVIOUS channel (backward)
   void _onChannelDown() {
     if (_channelList.isEmpty) return;
-    // Go to previous channel, wrap to last if at first
-    final newIndex = _currentIndex == 0 ? _channelList.length - 1 : _currentIndex - 1;
+    final newIndex =
+        _currentIndex == 0 ? _channelList.length - 1 : _currentIndex - 1;
     _navigateToChannel(newIndex);
   }
 
@@ -119,145 +114,167 @@ class _LiveChannelDetailPageState extends State<LiveChannelDetailPage> {
       currentSlug = channel.slug;
     });
     context.read<WatchLiveBloc>().add(
-      WatchLiveEvent.watchLiveChannel(slug: channel.slug),
-    );
+          WatchLiveEvent.watchLiveChannel(slug: channel.slug),
+        );
+  }
+
+  KeyEventResult _handleRootKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.goBack || key == LogicalKeyboardKey.escape) {
+      AppNavigation.pop(context);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelUp ||
+        key == LogicalKeyboardKey.mediaTrackNext) {
+      _onChannelUp();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.channelDown ||
+        key == LogicalKeyboardKey.mediaTrackPrevious) {
+      _onChannelDown();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        // Listen for channel list updates
-        BlocListener<ChannelsBloc, ChannelsState>(
-          listener: (context, state) {
-            if (state.channels.isNotEmpty && _channelList.isEmpty) {
-              _channelList = state.channels.map((channel) => ChannelInfo(
-                slug: channel.slug,
-                name: channel.name,
-                channelNumber: channel.channelNumber,
-                isLive: true,
-              )).toList();
-              
-              _currentIndex = _channelList.indexWhere((c) => c.slug == currentSlug);
-              if (_currentIndex == -1) _currentIndex = 0;
-              _isLoadingChannels = false;
-              setState(() {});
-            }
-          },
-        ),
-      ],
-      child: BlocBuilder<WatchLiveBloc, WatchLiveState>(
-        builder: (context, state) {
-          // Show loading if channels are still loading
-          if (_isLoadingChannels || _channelList.isEmpty) {
-            return const ColoredBox(
-              color: Colors.black,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading channels...',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) AppNavigation.pop(context);
+      },
+      child: Focus(
+        autofocus: true,
+        canRequestFocus: false,
+        onKeyEvent: _handleRootKeyEvent,
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ChannelsBloc, ChannelsState>(
+              listener: (context, state) {
+                if (state.channels.isNotEmpty && _channelList.isEmpty) {
+                  _channelList = state.channels
+                      .map((channel) => ChannelInfo(
+                            slug: channel.slug,
+                            name: channel.name,
+                            channelNumber: channel.channelNumber,
+                            isLive: true,
+                          ))
+                      .toList();
 
-          if (state.isLiveWatch == Status.loading) {
-            return const ColoredBox(
-              color: Colors.black,
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            );
-          }
-
-          if (state.isLiveWatch == Status.error) {
-            return ColoredBox(
-              color: Colors.black,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      color: Colors.white.withOpacity(0.7),
-                      size: 64,
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: _retry,
-                      style: TextButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.15),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.white.withOpacity(0.2)),
-                        ),
-                      ),
-                      child: const Text(
-                        'Try Again',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final streamUrl = state.channelStreamResponse?.stream.streamUrl ?? '';
-          final channel = state.channelStreamResponse?.channel;
-
-          if (streamUrl.isEmpty) {
-            return const ColoredBox(
-              color: Colors.black,
-              child: Center(
-                child: Text(
-                  'No Stream Found',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          }
-
-          // Update current channel info from response
-          if (channel != null) {
-            final index = _channelList.indexWhere((c) => c.slug == channel.slug);
-            if (index != -1 && _currentIndex != index) {
-              _currentIndex = index;
-            }
-          }
-
-          return SizedBox.expand(
-            child: LiveTVMediaPlayerWidget(
-              url: streamUrl,
-              channelNumber: _channelList.isNotEmpty 
-                  ? _channelList[_currentIndex].channelNumber 
-                  : 1,
-              totalChannels: _channelList.length,
-              onChannelUp: _onChannelUp,
-              onChannelDown: _onChannelDown,
-              onChannelSelect: () {
-                _showChannelList();
+                  _currentIndex =
+                      _channelList.indexWhere((c) => c.slug == currentSlug);
+                  if (_currentIndex == -1) _currentIndex = 0;
+                  _isLoadingChannels = false;
+                  setState(() {});
+                }
               },
-              title: channel?.name ?? currentSlug,
-              isBack: true,
             ),
-          );
-        },
+          ],
+          child: BlocBuilder<WatchLiveBloc, WatchLiveState>(
+            builder: (context, state) {
+              final currentInfo = (_channelList.isNotEmpty &&
+                      _currentIndex >= 0 &&
+                      _currentIndex < _channelList.length)
+                  ? _channelList[_currentIndex]
+                  : null;
+
+              final channelFromResponse = state.channelStreamResponse?.channel;
+              final displayName = (channelFromResponse?.name.isNotEmpty == true)
+                  ? channelFromResponse!.name
+                  : (currentInfo?.name ?? currentSlug);
+              final displayChannelNumber = (channelFromResponse != null &&
+                      channelFromResponse.channelNumber > 0)
+                  ? channelFromResponse.channelNumber
+                  : (currentInfo?.channelNumber ?? 1);
+
+              // 1. Loading state
+              if (_isLoadingChannels ||
+                  _channelList.isEmpty ||
+                  state.isLiveWatch == Status.loading) {
+                return _LoadingChannelView(
+                  channelName: displayName,
+                  channelNumber: displayChannelNumber,
+                  onBack: () => AppNavigation.pop(context),
+                );
+              }
+
+              final isLocked = (state.channelStreamResponse?.locked == true) ||
+                  (state.channelStreamResponse?.message
+                          .toLowerCase()
+                          .contains('subscription') ==
+                      true) ||
+                  (state.channelStreamResponse?.message
+                          .toLowerCase()
+                          .contains('locked') ==
+                      true);
+
+              final streamUrl =
+                  state.channelStreamResponse?.stream.streamUrl ?? '';
+
+              // 2. Locked / Subscription required state
+              if (isLocked) {
+                final message =
+                    (state.channelStreamResponse?.message.isNotEmpty == true)
+                        ? state.channelStreamResponse!.message
+                        : 'Active subscription required to watch this channel.';
+                return _SubscriptionLockedView(
+                  channelName: displayName,
+                  channelNumber: displayChannelNumber,
+                  message: message,
+                  onBack: () => AppNavigation.pop(context),
+                  onNextChannel: _onChannelUp,
+                  onPreviousChannel: _onChannelDown,
+                  onBrowseChannels: _showChannelList,
+                );
+              }
+
+              // 3. Error state or Empty Stream state
+              if (state.isLiveWatch == Status.error || streamUrl.isEmpty) {
+                final errorMsg =
+                    (state.channelStreamResponse?.message.isNotEmpty == true)
+                        ? state.channelStreamResponse!.message
+                        : 'Unable to load channel stream.';
+                return _ChannelErrorView(
+                  channelName: displayName,
+                  channelNumber: displayChannelNumber,
+                  message: errorMsg,
+                  onRetry: _retry,
+                  onBack: () => AppNavigation.pop(context),
+                  onNextChannel: _onChannelUp,
+                  onPreviousChannel: _onChannelDown,
+                  onBrowseChannels: _showChannelList,
+                );
+              }
+
+              // 4. Update index if channel slug matches
+              if (channelFromResponse != null &&
+                  channelFromResponse.slug.isNotEmpty) {
+                final index = _channelList
+                    .indexWhere((c) => c.slug == channelFromResponse.slug);
+                if (index != -1 && _currentIndex != index) {
+                  _currentIndex = index;
+                }
+              }
+
+              // 5. Active Player
+              return SizedBox.expand(
+                child: LiveTVMediaPlayerWidget(
+                  url: streamUrl,
+                  channelNumber: displayChannelNumber,
+                  totalChannels: _channelList.length,
+                  onChannelUp: _onChannelUp,
+                  onChannelDown: _onChannelDown,
+                  onChannelSelect: _showChannelList,
+                  title: displayName,
+                  isBack: true,
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -270,94 +287,148 @@ class _LiveChannelDetailPageState extends State<LiveChannelDetailPage> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.75,
         decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
+          color: Color(0xFF14141B),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black87,
+              blurRadius: 24,
+              spreadRadius: 8,
+            ),
+          ],
         ),
         child: Column(
           children: [
-            // Handle bar
             Container(
               margin: const EdgeInsets.only(top: 12),
-              width: 40,
+              width: 44,
               height: 4,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'All Channels',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+              child: Row(
+                children: [
+                  const Text(
+                    'All Channels',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_channelList.length} Channels',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ),
+            const Divider(color: Colors.white12, height: 1),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: _channelList.length,
                 itemBuilder: (context, index) {
                   final channel = _channelList[index];
                   final isSelected = index == _currentIndex;
-                  return ListTile(
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isSelected
-                            ? AppColors.primary.withOpacity(0.2)
-                            : Colors.white.withOpacity(0.05),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.white.withOpacity(0.1),
-                          width: 1,
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: TvFocusable(
+                      autofocus: isSelected,
+                      borderRadius: BorderRadius.circular(10),
+                      onSelect: () {
+                        Navigator.pop(context);
+                        _onChannelSelect(index);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
                         ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${channel.channelNumber}',
-                          style: TextStyle(
-                            color: isSelected ? AppColors.primary : Colors.white70,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withOpacity(0.25)
+                              : Colors.white.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.white.withOpacity(0.08),
+                            width: isSelected ? 1.5 : 1,
                           ),
                         ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.white.withOpacity(0.08),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${channel.channelNumber}',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                channel.name,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontSize: 16,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'PLAYING',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                    title: Text(
-                      channel.name,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.white70,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                    trailing: isSelected
-                        ? Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          )
-                        : null,
-                    onTap: () {
-                      Navigator.pop(context);
-                      _onChannelSelect(index);
-                    },
                   );
                 },
               ),
@@ -382,4 +453,550 @@ class ChannelInfo {
     required this.channelNumber,
     this.isLive = false,
   });
+}
+
+/// Loading View with Top Bar & Channel Info
+class _LoadingChannelView extends StatelessWidget {
+  const _LoadingChannelView({
+    required this.channelName,
+    required this.channelNumber,
+    required this.onBack,
+  });
+
+  final String channelName;
+  final int channelNumber;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              child: Row(
+                children: [
+                  TvFocusable(
+                    borderRadius: BorderRadius.circular(50),
+                    onSelect: onBack,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.primary),
+                    ),
+                    child: Text(
+                      'CH $channelNumber',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    channelName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 3.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Tuning to $channelName...',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Subscription Locked View for Leanback TV
+class _SubscriptionLockedView extends StatelessWidget {
+  const _SubscriptionLockedView({
+    required this.channelName,
+    required this.channelNumber,
+    required this.message,
+    required this.onBack,
+    required this.onNextChannel,
+    required this.onPreviousChannel,
+    required this.onBrowseChannels,
+  });
+
+  final String channelName;
+  final int channelNumber;
+  final String message;
+  final VoidCallback onBack;
+  final VoidCallback onNextChannel;
+  final VoidCallback onPreviousChannel;
+  final VoidCallback onBrowseChannels;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0D12),
+      body: Stack(
+        children: [
+          // Background ambient gradient
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.2),
+                  radius: 1.0,
+                  colors: [
+                    Colors.amber.shade900.withOpacity(0.18),
+                    Colors.black.withOpacity(0.95),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Top bar with Back button
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              child: Row(
+                children: [
+                  TvFocusable(
+                    borderRadius: BorderRadius.circular(50),
+                    onSelect: onBack,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber.shade600),
+                    ),
+                    child: Text(
+                      'CH $channelNumber',
+                      style: TextStyle(
+                        color: Colors.amber.shade300,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    channelName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Centered subscription card
+          Center(
+            child: Container(
+              width: 580,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: const Color(0xFF171722),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.amber.withOpacity(0.35),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withOpacity(0.12),
+                    blurRadius: 36,
+                    spreadRadius: 2,
+                  ),
+                  const BoxShadow(
+                    color: Colors.black87,
+                    blurRadius: 24,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Colors.amber.shade500, Colors.orange.shade700],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withOpacity(0.4),
+                          blurRadius: 20,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Subscription Required',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.75),
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Action buttons
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      _ActionButton(
+                        autofocus: true,
+                        label: 'Next Channel',
+                        icon: Icons.skip_next_rounded,
+                        isPrimary: true,
+                        onSelect: onNextChannel,
+                      ),
+                      _ActionButton(
+                        label: 'Previous',
+                        icon: Icons.skip_previous_rounded,
+                        isPrimary: false,
+                        onSelect: onPreviousChannel,
+                      ),
+                      _ActionButton(
+                        label: 'All Channels',
+                        icon: Icons.view_list_rounded,
+                        isPrimary: false,
+                        onSelect: onBrowseChannels,
+                      ),
+                      _ActionButton(
+                        label: 'Back',
+                        icon: Icons.arrow_back_rounded,
+                        isPrimary: false,
+                        onSelect: onBack,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Generic Error View with Channel Surfing Options
+class _ChannelErrorView extends StatelessWidget {
+  const _ChannelErrorView({
+    required this.channelName,
+    required this.channelNumber,
+    required this.message,
+    required this.onRetry,
+    required this.onBack,
+    required this.onNextChannel,
+    required this.onPreviousChannel,
+    required this.onBrowseChannels,
+  });
+
+  final String channelName;
+  final int channelNumber;
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onBack;
+  final VoidCallback onNextChannel;
+  final VoidCallback onPreviousChannel;
+  final VoidCallback onBrowseChannels;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0E0E14),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+              child: Row(
+                children: [
+                  TvFocusable(
+                    borderRadius: BorderRadius.circular(50),
+                    onSelect: onBack,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.1),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.primary),
+                    ),
+                    child: Text(
+                      'CH $channelNumber',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    channelName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Center(
+            child: Container(
+              width: 560,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: const Color(0xFF181824),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.12),
+                  width: 1.5,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black87,
+                    blurRadius: 24,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red.withOpacity(0.15),
+                      border: Border.all(color: Colors.red.withOpacity(0.4)),
+                    ),
+                    child: const Icon(
+                      Icons.error_outline_rounded,
+                      color: Color(0xFFFF5252),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Stream Unavailable',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      _ActionButton(
+                        autofocus: true,
+                        label: 'Try Again',
+                        icon: Icons.refresh_rounded,
+                        isPrimary: true,
+                        onSelect: onRetry,
+                      ),
+                      _ActionButton(
+                        label: 'Next Channel',
+                        icon: Icons.skip_next_rounded,
+                        isPrimary: false,
+                        onSelect: onNextChannel,
+                      ),
+                      _ActionButton(
+                        label: 'All Channels',
+                        icon: Icons.view_list_rounded,
+                        isPrimary: false,
+                        onSelect: onBrowseChannels,
+                      ),
+                      _ActionButton(
+                        label: 'Back',
+                        icon: Icons.arrow_back_rounded,
+                        isPrimary: false,
+                        onSelect: onBack,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Reusable TV-focusable action button for detail screens
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.isPrimary,
+    required this.onSelect,
+    this.autofocus = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isPrimary;
+  final VoidCallback onSelect;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return TvFocusable(
+      autofocus: autofocus,
+      borderRadius: BorderRadius.circular(10),
+      onSelect: onSelect,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: isPrimary
+              ? AppColors.primary
+              : Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isPrimary ? Colors.white : Colors.white24,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

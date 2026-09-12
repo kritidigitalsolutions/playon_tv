@@ -81,7 +81,9 @@ class _AppTextFieldState extends State<AppTextField> {
       final key = event.logicalKey;
       if (key == LogicalKeyboardKey.select ||
           key == LogicalKeyboardKey.enter ||
-          key == LogicalKeyboardKey.gameButtonA) {
+          key == LogicalKeyboardKey.numpadEnter ||
+          key == LogicalKeyboardKey.gameButtonA ||
+          key == LogicalKeyboardKey.space) {
         setState(() => _editing = true);
         _innerNode.requestFocus();
         return KeyEventResult.handled;

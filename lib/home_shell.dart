@@ -15,9 +15,10 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  initState() {
-    context.read<AuthBloc>().add(AuthEvent.fetchUser());
+  @override
+  void initState() {
     super.initState();
+    context.read<AuthBloc>().add(AuthEvent.fetchUser());
   }
 
   int selectedIndex = 0;
